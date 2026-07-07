@@ -64,8 +64,7 @@ class ChessEngine:
         piece_type = moving_piece[1]
         piece_color = moving_piece[0]
 
-        # CRITICAL FIX for Test 1 (Iteration 7): Concurrent opposite color movement guard
-        # If there is already an active moving piece belonging to the opposite team, block this move
+        # Concurrent opposite color movement guard
         for move in self.ongoing_moves:
             active_piece_token = move[5]
             if active_piece_token[0] != piece_color:
@@ -89,18 +88,28 @@ class ChessEngine:
         self.selected_pos = None
 
     def _refresh_board_state(self):
-        """Processes and commits historical movements whose arrival times have been reached."""
+        """Processes and commits historical movements with late-binding collision guards."""
         remaining_moves = []
         
-        # Sort chronologically to resolve movements in order
+        # Sort chronologically to resolve movements in absolute order of arrival
         self.ongoing_moves.sort(key=lambda m: m[0])
 
         for move in self.ongoing_moves:
             arrival_time, from_row, from_col, to_row, to_col, piece_token = move
             
             if self.game_clock >= arrival_time:
+                current_target = self.board[to_row][to_col]
+                
+                # Late-Binding Guard 1: Friendly-Piece Landing Conflict
+                # If a friendly piece occupied the target cell during transit, the move aborts
+                if current_target != '.' and current_target[0] == piece_token[0]:
+                    self.pieces_in_flight.discard((from_row, from_col))
+                    continue
+
+                # Execute the movement steps on the matrix
                 if self.board[from_row][from_col] == piece_token:
                     self.board[from_row][from_col] = '.'
+                
                 self.board[to_row][to_col] = piece_token
                 self.pieces_in_flight.discard((from_row, from_col))
             else:
