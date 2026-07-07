@@ -46,14 +46,19 @@ class ChessEngine:
 
     def _execute_move(self, from_row, from_col, to_row, to_col):
         moving_piece = self.board[from_row][from_col]
+        target_piece = self.board[to_row][to_col]
         piece_type = moving_piece[1]  # Extract single character token shape (K, R, B, Q, N)
 
-        # Route to specific geometric strategy check
-        if not MoveValidator.is_valid_move(piece_type, from_row, from_col, to_row, to_col):
-            # Move is illegal -> Ignore and maintain active selection focus
+        # Capture Guard: Prevent capturing a piece of the exact same team color
+        if target_piece != '.' and target_piece[0] == moving_piece[0]:
             return
 
-        # Move is legal -> Execute matrix update and clear selection state
+        # Route to specific geometric and path obstruction strategy checks
+        if not MoveValidator.is_valid_move(piece_type, from_row, from_col, to_row, to_col, self.board):
+            # Move is illegal or blocked -> Ignore and maintain active selection focus
+            return
+
+        # Move is legal -> Execute matrix update (handles empty movement and enemy captures) and clear selection
         self.board[to_row][to_col] = self.board[from_row][from_col]
         self.board[from_row][from_col] = '.'
         self.selected_pos = None
