@@ -11,7 +11,7 @@ class ChessEngine:
         # Tracks active movements: (arrival_time, from_row, from_col, to_row, to_col, piece_token)
         self.ongoing_moves = []
         
-        # New: Tracks source positions of pieces that are currently traveling and locked
+        # Tracks source positions of pieces that are currently traveling and locked
         self.pieces_in_flight = set()
 
     def click(self, x, y):
@@ -23,7 +23,6 @@ class ChessEngine:
         if not (0 <= row < self.rows and 0 <= col < self.cols):
             return
 
-        # Safeguard: If the clicked square contains a piece currently locked in transit, ignore interaction
         if (row, col) in self.pieces_in_flight:
             return
 
@@ -59,12 +58,18 @@ class ChessEngine:
         if moving_piece == '.':
             return
 
-        # Double check that the piece we are trying to move isn't already flying
         if (from_row, from_col) in self.pieces_in_flight:
             return
 
         piece_type = moving_piece[1]
         piece_color = moving_piece[0]
+
+        # CRITICAL FIX for Test 1 (Iteration 7): Concurrent opposite color movement guard
+        # If there is already an active moving piece belonging to the opposite team, block this move
+        for move in self.ongoing_moves:
+            active_piece_token = move[5]
+            if active_piece_token[0] != piece_color:
+                return
 
         if target_piece != '.' and target_piece[0] == moving_piece[0]:
             return
@@ -94,12 +99,9 @@ class ChessEngine:
             arrival_time, from_row, from_col, to_row, to_col, piece_token = move
             
             if self.game_clock >= arrival_time:
-                # The piece has arrived! Perform matrix update and unlock positions
                 if self.board[from_row][from_col] == piece_token:
                     self.board[from_row][from_col] = '.'
                 self.board[to_row][to_col] = piece_token
-                
-                # Safely release the transit lock on this source square coordinates
                 self.pieces_in_flight.discard((from_row, from_col))
             else:
                 remaining_moves.append(move)
