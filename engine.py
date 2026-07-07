@@ -10,6 +10,23 @@ class ChessEngine:
         self.ongoing_moves = []
         self.pieces_in_flight = set()
         self.game_over = False
+        
+        # Tracks pieces jumping in place: (arrival_time, row, col, piece_token)
+        self.ongoing_jumps = []
+
+    def jump(self, x, y):
+        """Direct jump command route mapped from parser/router input rules."""
+        self._refresh_board_state()
+        if self.game_over:
+            return
+
+        row = y // 100
+        col = x // 100
+
+        if not (0 <= row < self.rows and 0 <= col < self.cols):
+            return
+
+        self._execute_jump(row, col)
 
     def click(self, x, y):
         self._refresh_board_state()
@@ -22,7 +39,7 @@ class ChessEngine:
         if not (0 <= row < self.rows and 0 <= col < self.cols):
             return
 
-        if (row, col) in self.pieces_in_flight:
+        if (row, col) in self.pieces_in_flight and self.selected_pos is None:
             return
 
         token = self.board[row][col]
@@ -32,14 +49,19 @@ class ChessEngine:
                 self.selected_pos = (row, col)
             else:
                 curr_row, curr_col = self.selected_pos
-                if token[0] == self.board[curr_row][curr_col][0]:
+                if curr_row == row and curr_col == col:
+                    self._execute_jump(row, col)
+                elif token[0] == self.board[curr_row][curr_col][0]:
                     self.selected_pos = (row, col)
                 else:
                     self._execute_move(curr_row, curr_col, row, col)
         else:
             if self.selected_pos is not None:
                 curr_row, curr_col = self.selected_pos
-                self._execute_move(curr_row, curr_col, row, col)
+                if curr_row == row and curr_col == col:
+                    self._execute_jump(row, col)
+                else:
+                    self._execute_move(curr_row, curr_col, row, col)
 
     def wait(self, ms):
         self.game_clock += ms
@@ -49,6 +71,19 @@ class ChessEngine:
         self._refresh_board_state()
         for row in self.board:
             print(" ".join(row))
+
+    def _execute_jump(self, row, col):
+        jumping_piece = self.board[row][col]
+        if jumping_piece == '.':
+            return
+
+        if (row, col) in self.pieces_in_flight:
+            return
+
+        arrival_time = self.game_clock + 1000
+        self.ongoing_jumps.append((arrival_time, row, col, jumping_piece))
+        self.pieces_in_flight.add((row, col))
+        self.selected_pos = None
 
     def _execute_move(self, from_row, from_col, to_row, to_col):
         if self.game_over:
@@ -67,8 +102,7 @@ class ChessEngine:
         piece_color = moving_piece[0]
 
         for move in self.ongoing_moves:
-            active_piece_token = move[5]
-            if active_piece_token[0] != piece_color:
+            if move[5][0] != piece_color:
                 return
 
         if target_piece != '.' and target_piece[0] == moving_piece[0]:
@@ -77,8 +111,7 @@ class ChessEngine:
         if not MoveValidator.is_valid_move(piece_type, from_row, from_col, to_row, to_col, self.board, piece_color):
             return
 
-        distance = max(abs(to_row - from_row), abs(to_col - from_col))
-        travel_time = distance * 1000
+        travel_time = 1000
         arrival_time = self.game_clock + travel_time
 
         self.ongoing_moves.append((arrival_time, from_row, from_col, to_row, to_col, moving_piece))
@@ -86,19 +119,46 @@ class ChessEngine:
         self.selected_pos = None
 
     def _refresh_board_state(self):
+        # 1. Update jumps and track active airborne defense cells
+        airborne_cells = {}
+        remaining_jumps = []
+        for jump in self.ongoing_jumps:
+            end_time, r, c, token = jump
+            airborne_cells[(r, c)] = token
+            if self.game_clock < end_time:
+                remaining_jumps.append(jump)
+            else:
+                self.pieces_in_flight.discard((r, c))
+        self.ongoing_jumps = remaining_jumps
+
+        # 2. Process moves
         remaining_moves = []
         self.ongoing_moves.sort(key=lambda m: m[0])
 
         for move in self.ongoing_moves:
             arrival_time, from_row, from_col, to_row, to_col, piece_token = move
             
+            # Check if game ended
             if self.game_over:
                 self.pieces_in_flight.discard((from_row, from_col))
                 continue
 
+            # NEW: Check if the moving piece's destination is currently defended by an airborne unit
+            if (to_row, to_col) in airborne_cells:
+                defender = airborne_cells[(to_row, to_col)]
+                if defender[0] != piece_token[0]:
+                    # The arriving piece hits an airborne defender and is destroyed immediately
+                    self.board[from_row][from_col] = '.'
+                    self.pieces_in_flight.discard((from_row, from_col))
+                    continue
+
             if self.game_clock >= arrival_time:
+                # Execution logic
+                if self.board[from_row][from_col] != move[5]:
+                    self.pieces_in_flight.discard((from_row, from_col))
+                    continue
+
                 current_target = self.board[to_row][to_col]
-                
                 if current_target != '.' and current_target[0] == piece_token[0]:
                     self.pieces_in_flight.discard((from_row, from_col))
                     continue
@@ -106,14 +166,10 @@ class ChessEngine:
                 if current_target != '.' and current_target[1] == 'K':
                     self.game_over = True
 
-                # Upgrade: Pawn Promotion Evaluation upon successful landing
                 if piece_token[1] == 'P' and (to_row == 0 or to_row == self.rows - 1):
-                    # Replace the token representation with its corresponding color Queen
                     piece_token = piece_token[0] + 'Q'
 
-                if self.board[from_row][from_col] == move[5]: # Verify original token before clearing
-                    self.board[from_row][from_col] = '.'
-                
+                self.board[from_row][from_col] = '.'
                 self.board[to_row][to_col] = piece_token
                 self.pieces_in_flight.discard((from_row, from_col))
                 

@@ -8,6 +8,7 @@ class TextCommandRouter:
         # Map text keys directly to target execution handlers
         self.dispatch_map = {
             "click": self._handle_click,
+            "jump": self._handle_jump,  # Added for Iteration 11 airborne support
             "wait": self._handle_wait,
             "print": self._handle_print
         }
@@ -25,6 +26,11 @@ class TextCommandRouter:
     def _handle_click(self, args):
         x, y = int(args[0]), int(args[1])
         self.engine.click(x, y)
+
+    def _handle_jump(self, args):
+        """Extracts grid coordinates and invokes the defensive jump engine mechanics."""
+        x, y = int(args[0]), int(args[1])
+        self.engine.jump(x, y)
 
     def _handle_wait(self, args):
         ms = int(args[0])
