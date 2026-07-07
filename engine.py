@@ -13,9 +13,17 @@ class ChessEngine:
         
         # Tracks source positions of pieces that are currently traveling and locked
         self.pieces_in_flight = set()
+        
+        # New for Iteration 9: State flag to track tournament conclusion
+        self.game_over = False
 
     def click(self, x, y):
+        # Always synchronize timelines first
         self._refresh_board_state()
+
+        # CRITICAL FIX for Iteration 9: If the match has concluded, freeze and ignore all inputs
+        if self.game_over:
+            return
 
         row = y // 100
         col = x // 100
@@ -43,6 +51,7 @@ class ChessEngine:
                 self._execute_move(curr_row, curr_col, row, col)
 
     def wait(self, ms):
+        # We allow clock progression to flush lingering animations/moves, but no new inputs
         self.game_clock += ms
         self._refresh_board_state()
 
@@ -52,6 +61,10 @@ class ChessEngine:
             print(" ".join(row))
 
     def _execute_move(self, from_row, from_col, to_row, to_col):
+        # Early guard if a previous event resolved game over during click sync
+        if self.game_over:
+            return
+
         moving_piece = self.board[from_row][from_col]
         target_piece = self.board[to_row][to_col]
         
@@ -88,7 +101,7 @@ class ChessEngine:
         self.selected_pos = None
 
     def _refresh_board_state(self):
-        """Processes and commits historical movements with late-binding collision guards."""
+        """Processes and commits historical movements with game-over victory checks."""
         remaining_moves = []
         
         # Sort chronologically to resolve movements in absolute order of arrival
@@ -97,14 +110,23 @@ class ChessEngine:
         for move in self.ongoing_moves:
             arrival_time, from_row, from_col, to_row, to_col, piece_token = move
             
+            # If a prior move in this loop already ended the game, discard subsequent in-flight executions
+            if self.game_over:
+                self.pieces_in_flight.discard((from_row, from_col))
+                continue
+
             if self.game_clock >= arrival_time:
                 current_target = self.board[to_row][to_col]
                 
-                # Late-Binding Guard 1: Friendly-Piece Landing Conflict
-                # If a friendly piece occupied the target cell during transit, the move aborts
+                # Late-Binding Guard: Friendly-Piece Landing Conflict
                 if current_target != '.' and current_target[0] == piece_token[0]:
                     self.pieces_in_flight.discard((from_row, from_col))
                     continue
+
+                # CRITICAL UPDATE for Iteration 9: Game Over Evaluation
+                # Check if the target piece slated for capture is an enemy King ('K')
+                if current_target != '.' and current_target[1] == 'K':
+                    self.game_over = True
 
                 # Execute the movement steps on the matrix
                 if self.board[from_row][from_col] == piece_token:
@@ -112,6 +134,11 @@ class ChessEngine:
                 
                 self.board[to_row][to_col] = piece_token
                 self.pieces_in_flight.discard((from_row, from_col))
+                
+                # If game over was just triggered, we can clear out any remaining queues immediately
+                if self.game_over:
+                    self.ongoing_moves = []
+                    return
             else:
                 remaining_moves.append(move)
                 
