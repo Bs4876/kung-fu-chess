@@ -1,3 +1,5 @@
+# Repository URL: https://github.com/Bs4876/kung-fu-chess-server
+
 import sys
 from engine import ChessEngine
 from parser import BoardParser
