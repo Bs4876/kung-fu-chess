@@ -114,7 +114,7 @@ class ChessEngine:
         if not MoveValidator.is_valid_move(piece_type, from_row, from_col, to_row, to_col, self.board, piece_color):
             return
 
-        arrival_time = self.game_clock + MOVE_TRAVEL_TIME + 1
+        arrival_time = self.game_clock + MOVE_TRAVEL_TIME
 
         self.ongoing_moves.append((arrival_time, from_row, from_col, to_row, to_col, moving_piece))
         self.pieces_in_flight.add((from_row, from_col))
@@ -126,9 +126,9 @@ class ChessEngine:
         remaining_jumps = []
         for jump in self.ongoing_jumps:
             end_time, r, c, token = jump
-            airborne_cells[(r, c)] = token
-            if self.game_clock < end_time:
+            if self.game_clock <= end_time:
                 remaining_jumps.append(jump)
+                airborne_cells[(r, c)] = token
             else:
                 self.pieces_in_flight.discard((r, c))
         self.ongoing_jumps = remaining_jumps
@@ -145,16 +145,14 @@ class ChessEngine:
                 self.pieces_in_flight.discard((from_row, from_col))
                 continue
 
-            # NEW: Check if the moving piece's destination is currently defended by an airborne unit
-            if (to_row, to_col) in airborne_cells:
-                defender = airborne_cells[(to_row, to_col)]
-                if defender[0] != piece_token[0]:
-                    # The arriving piece hits an airborne defender and is destroyed immediately
-                    self.board.set_piece(from_row, from_col, EMPTY_CELL)
-                    self.pieces_in_flight.discard((from_row, from_col))
-                    continue
-
             if self.game_clock >= arrival_time:
+                # Check if the destination is defended by an airborne unit at the moment of arrival
+                if (to_row, to_col) in airborne_cells:
+                    defender = airborne_cells[(to_row, to_col)]
+                    if defender[0] != piece_token[0]:
+                        self.board.set_piece(from_row, from_col, EMPTY_CELL)
+                        self.pieces_in_flight.discard((from_row, from_col))
+                        continue
                 # Execution logic
                 if self.board.get_piece(from_row, from_col) != move[5]:
                     self.pieces_in_flight.discard((from_row, from_col))

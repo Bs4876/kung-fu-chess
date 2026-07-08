@@ -19,7 +19,7 @@ def test_click_adds_valid_move_to_ongoing_moves(empty_board):
     engine.click(300, 600)
 
     assert len(engine.ongoing_moves) == 1
-    assert engine.ongoing_moves[0][0] == MOVE_TRAVEL_TIME + 1
+    assert engine.ongoing_moves[0][0] == MOVE_TRAVEL_TIME
     assert engine.ongoing_moves[0][1:5] == (7, 3, 6, 3)
     assert engine.ongoing_moves[0][5] == WHITE + 'P'
     assert engine.selected_pos is None
@@ -52,7 +52,7 @@ def test_refresh_board_state_clears_expired_moves(empty_board):
     engine = ChessEngine(empty_board)
     engine.ongoing_moves.append((MOVE_TRAVEL_TIME, 7, 3, 6, 3, WHITE + 'P'))
     engine.pieces_in_flight.add((7, 3))
-    engine.game_clock = MOVE_TRAVEL_TIME + 1
+    engine.game_clock = MOVE_TRAVEL_TIME
 
     engine._refresh_board_state()
 
@@ -121,6 +121,7 @@ def test_refresh_board_state_handles_airborne_collision_and_promotion(empty_boar
     engine.ongoing_jumps.append((JUMP_TRAVEL_TIME, 0, 0, BLACK + 'P'))
     engine.ongoing_moves.append((MOVE_TRAVEL_TIME, 7, 3, 0, 0, WHITE + 'P'))
     engine.pieces_in_flight.add((7, 3))
+    engine.game_clock = MOVE_TRAVEL_TIME
 
     engine._refresh_board_state()
 
@@ -237,6 +238,7 @@ def test_refresh_board_state_discards_expired_jumps_and_pending_moves(empty_boar
     engine.ongoing_jumps.append((0, 0, 0, WHITE + 'P'))
     engine.ongoing_moves.append((MOVE_TRAVEL_TIME + 1, 7, 3, 6, 3, WHITE + 'P'))
     engine.pieces_in_flight.add((7, 3))
+    engine.game_clock = 1
 
     engine._refresh_board_state()
 
