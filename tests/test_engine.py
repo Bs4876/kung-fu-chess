@@ -19,7 +19,7 @@ def test_click_adds_valid_move_to_ongoing_moves(empty_board):
     engine.click(300, 600)
 
     assert len(engine.ongoing_moves) == 1
-    assert engine.ongoing_moves[0][0] == MOVE_TRAVEL_TIME
+    assert engine.ongoing_moves[0][0] == MOVE_TRAVEL_TIME + 1
     assert engine.ongoing_moves[0][1:5] == (7, 3, 6, 3)
     assert engine.ongoing_moves[0][5] == WHITE + 'P'
     assert engine.selected_pos is None

@@ -114,7 +114,7 @@ class ChessEngine:
         if not MoveValidator.is_valid_move(piece_type, from_row, from_col, to_row, to_col, self.board, piece_color):
             return
 
-        arrival_time = self.game_clock + MOVE_TRAVEL_TIME
+        arrival_time = self.game_clock + MOVE_TRAVEL_TIME + 1
 
         self.ongoing_moves.append((arrival_time, from_row, from_col, to_row, to_col, moving_piece))
         self.pieces_in_flight.add((from_row, from_col))
@@ -154,7 +154,7 @@ class ChessEngine:
                     self.pieces_in_flight.discard((from_row, from_col))
                     continue
 
-            if self.game_clock > arrival_time:
+            if self.game_clock >= arrival_time:
                 # Execution logic
                 if self.board.get_piece(from_row, from_col) != move[5]:
                     self.pieces_in_flight.discard((from_row, from_col))
