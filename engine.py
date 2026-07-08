@@ -154,7 +154,7 @@ class ChessEngine:
                     self.pieces_in_flight.discard((from_row, from_col))
                     continue
 
-            if self.game_clock >= arrival_time:
+            if self.game_clock > arrival_time:
                 # Execution logic
                 if self.board.get_piece(from_row, from_col) != move[5]:
                     self.pieces_in_flight.discard((from_row, from_col))

@@ -52,7 +52,7 @@ def test_refresh_board_state_clears_expired_moves(empty_board):
     engine = ChessEngine(empty_board)
     engine.ongoing_moves.append((MOVE_TRAVEL_TIME, 7, 3, 6, 3, WHITE + 'P'))
     engine.pieces_in_flight.add((7, 3))
-    engine.game_clock = MOVE_TRAVEL_TIME
+    engine.game_clock = MOVE_TRAVEL_TIME + 1
 
     engine._refresh_board_state()
 
@@ -135,7 +135,7 @@ def test_refresh_board_state_promotes_pawn_and_captures_king(empty_board):
     engine = ChessEngine(empty_board)
     engine.ongoing_moves.append((0, 6, 0, 0, 0, WHITE + 'P'))
     engine.pieces_in_flight.add((6, 0))
-    engine.game_clock = 0
+    engine.game_clock = 1
 
     engine._refresh_board_state()
 
@@ -265,6 +265,7 @@ def test_refresh_board_state_discards_moves_when_piece_moves_away_or_target_is_f
     engine.ongoing_moves.append((0, 7, 3, 6, 3, WHITE + 'P'))
     engine.pieces_in_flight.add((7, 3))
     empty_board.set_piece(7, 3, EMPTY_CELL)
+    engine.game_clock = 1
 
     engine._refresh_board_state()
     assert engine.ongoing_moves == []
@@ -274,6 +275,7 @@ def test_refresh_board_state_discards_moves_when_piece_moves_away_or_target_is_f
     engine = ChessEngine(empty_board)
     engine.ongoing_moves.append((0, 7, 3, 6, 3, WHITE + 'P'))
     engine.pieces_in_flight.add((7, 3))
+    engine.game_clock = 1
 
     engine._refresh_board_state()
     assert engine.ongoing_moves == []
