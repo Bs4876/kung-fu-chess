@@ -4,7 +4,7 @@ from movement import MoveValidator
 
 class ChessEngine:
     def __init__(self, board_matrix):
-        self.board = Board(board_matrix)
+        self.board = board_matrix if isinstance(board_matrix, Board) else Board(board_matrix)
         self.rows = self.board.rows
         self.cols = self.board.cols
         self.selected_pos = None

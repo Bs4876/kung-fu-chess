@@ -127,3 +127,23 @@ def test_validate_queen_moves(empty_board):
     assert valid_diagonal is True
     assert invalid_l is False
     assert blocked_path is False
+
+
+def test_is_valid_move_returns_false_for_same_square_and_unknown_piece():
+    board = Board([[EMPTY_CELL for _ in range(8)] for _ in range(8)])
+
+    assert MoveValidator.is_valid_move('P', 3, 3, 3, 3, board, WHITE) is False
+    assert MoveValidator.is_valid_move('X', 3, 3, 4, 4, board, WHITE) is False
+
+
+def test_pawn_two_step_move_is_rejected_when_destination_is_blocked():
+    board = Board([[EMPTY_CELL for _ in range(8)] for _ in range(8)] )
+    board.set_piece(5, 3, WHITE + 'N')
+
+    assert MoveValidator._validate_pawn(7, 3, 5, 3, board, WHITE) is False
+
+
+def test_pawn_move_is_rejected_for_invalid_vertical_progress():
+    board = Board([[EMPTY_CELL for _ in range(8)] for _ in range(8)])
+
+    assert MoveValidator._validate_pawn(7, 3, 4, 3, board, WHITE) is False
