@@ -142,3 +142,45 @@ def test_module_entrypoint_executes_main():
     finally:
         sys.stdin = original_stdin
         sys.stdout = original_stdout
+
+
+def test_main_rejects_invalid_row_width():
+    input_text = """Board:
+    wK . .
+    . bK
+    Commands:
+    """
+
+    original_stdin = sys.stdin
+    original_stdout = sys.stdout
+    try:
+        sys.stdin = io.StringIO(input_text)
+        sys.stdout = io.StringIO()
+        main.main()
+        output = sys.stdout.getvalue()
+    finally:
+        sys.stdin = original_stdin
+        sys.stdout = original_stdout
+
+    assert "ERROR ROW_WIDTH_MISMATCH" in output
+
+
+def test_main_rejects_unknown_token():
+    input_text = """Board:
+    wK xZ
+    . .
+    Commands:
+    """
+
+    original_stdin = sys.stdin
+    original_stdout = sys.stdout
+    try:
+        sys.stdin = io.StringIO(input_text)
+        sys.stdout = io.StringIO()
+        main.main()
+        output = sys.stdout.getvalue()
+    finally:
+        sys.stdin = original_stdin
+        sys.stdout = original_stdout
+
+    assert "ERROR UNKNOWN_TOKEN" in output

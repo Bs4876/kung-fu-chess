@@ -6,11 +6,11 @@ class MoveValidator:
         if from_row == to_row and from_col == to_col:
             return False
 
-        validator = MoveValidator._VALIDATORS.get(piece_type)
-        if validator is None:
+        validator_method = MoveValidator._VALIDATORS.get(piece_type)
+        if validator_method is None:
             return False
 
-        return validator(from_row, from_col, to_row, to_col, board, piece_color)
+        return validator_method(from_row, from_col, to_row, to_col, board, piece_color)
 
     @staticmethod
     def _validate_pawn(from_row, from_col, to_row, to_col, board, piece_color):
@@ -70,14 +70,7 @@ class MoveValidator:
             return MoveValidator._is_path_clear(from_row, from_col, to_row, to_col, board)
         return False
 
-    _VALIDATORS = {
-        'P': _validate_pawn,
-        'K': _validate_king,
-        'N': _validate_knight,
-        'R': _validate_rook,
-        'B': _validate_bishop,
-        'Q': _validate_queen,
-    }
+    _VALIDATORS = {}
 
     @staticmethod
     def _is_path_clear(from_row, from_col, to_row, to_col, board):
@@ -94,3 +87,14 @@ class MoveValidator:
             curr_col += col_step
 
         return True
+
+
+# Populate validators dictionary after class definition to avoid staticmethod descriptor issues
+MoveValidator._VALIDATORS = {
+    'P': MoveValidator._validate_pawn,
+    'K': MoveValidator._validate_king,
+    'N': MoveValidator._validate_knight,
+    'R': MoveValidator._validate_rook,
+    'B': MoveValidator._validate_bishop,
+    'Q': MoveValidator._validate_queen,
+}
