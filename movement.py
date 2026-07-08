@@ -23,7 +23,7 @@ class MoveValidator:
         if d_col == 0:
             if row_diff == forward_direction:
                 return target_token == EMPTY_CELL
-            if row_diff == 2 * forward_direction and from_row == start_row:
+            if row_diff == 2 * forward_direction and from_row == start_row and board.rows >= 8:
                 if target_token != EMPTY_CELL:
                     return False
                 return MoveValidator._is_path_clear(from_row, from_col, to_row, to_col, board)

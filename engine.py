@@ -168,7 +168,7 @@ class ChessEngine:
                 if current_target != EMPTY_CELL and current_target[1] == 'K':
                     self.game_over = True
 
-                if piece_token[1] == 'P' and (to_row == 0 or to_row == self.rows - 1):
+                if piece_token[1] == 'P' and self.rows >= 8 and (to_row == 0 or to_row == self.rows - 1):
                     piece_token = piece_token[0] + 'Q'
 
                 self.board.set_piece(from_row, from_col, EMPTY_CELL)
