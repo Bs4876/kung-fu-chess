@@ -1,3 +1,5 @@
+from constants import EMPTY_CELL, WHITE, BLACK
+
 class MoveValidator:
     @staticmethod
     def is_valid_move(piece_type, from_row, from_col, to_row, to_col, board, piece_color):
@@ -15,20 +17,20 @@ class MoveValidator:
         d_col = abs(to_col - from_col)
         row_diff = to_row - from_row
         target_token = board.get_piece(to_row, to_col)
-        forward_direction = -1 if piece_color == 'w' else 1
-        start_row = board.rows - 1 if piece_color == 'w' else 0
+        forward_direction = -1 if piece_color == WHITE else 1
+        start_row = board.rows - 1 if piece_color == WHITE else 0
 
         if d_col == 0:
             if row_diff == forward_direction:
-                return target_token == '.'
+                return target_token == EMPTY_CELL
             if row_diff == 2 * forward_direction and from_row == start_row:
-                if target_token != '.':
+                if target_token != EMPTY_CELL:
                     return False
                 return MoveValidator._is_path_clear(from_row, from_col, to_row, to_col, board)
             return False
 
         if d_col == 1 and row_diff == forward_direction:
-            return target_token != '.'
+            return target_token != EMPTY_CELL
 
         return False
 
@@ -86,7 +88,7 @@ class MoveValidator:
         curr_col = from_col + col_step
 
         while curr_row != to_row or curr_col != to_col:
-            if board.get_piece(curr_row, curr_col) != '.':
+            if board.get_piece(curr_row, curr_col) != EMPTY_CELL:
                 return False
             curr_row += row_step
             curr_col += col_step

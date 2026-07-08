@@ -1,4 +1,5 @@
 from board import Board
+from constants import EMPTY_CELL, JUMP_TRAVEL_TIME, MOVE_TRAVEL_TIME
 from movement import MoveValidator
 
 class ChessEngine:
@@ -45,7 +46,7 @@ class ChessEngine:
 
         token = self.board.get_piece(row, col)
 
-        if token != '.':
+        if token != EMPTY_CELL:
             if self.selected_pos is None:
                 self.selected_pos = (row, col)
             else:
@@ -76,13 +77,13 @@ class ChessEngine:
 
     def _execute_jump(self, row, col):
         jumping_piece = self.board.get_piece(row, col)
-        if jumping_piece == '.':
+        if jumping_piece == EMPTY_CELL:
             return
 
         if (row, col) in self.pieces_in_flight:
             return
 
-        arrival_time = self.game_clock + 1000
+        arrival_time = self.game_clock + JUMP_TRAVEL_TIME
         self.ongoing_jumps.append((arrival_time, row, col, jumping_piece))
         self.pieces_in_flight.add((row, col))
         self.selected_pos = None
@@ -94,7 +95,7 @@ class ChessEngine:
         moving_piece = self.board.get_piece(from_row, from_col)
         target_piece = self.board.get_piece(to_row, to_col)
         
-        if moving_piece == '.':
+        if moving_piece == EMPTY_CELL:
             return
 
         if (from_row, from_col) in self.pieces_in_flight:
@@ -107,14 +108,13 @@ class ChessEngine:
             if move[5][0] != piece_color:
                 return
 
-        if target_piece != '.' and target_piece[0] == moving_piece[0]:
+        if target_piece != EMPTY_CELL and target_piece[0] == moving_piece[0]:
             return
 
         if not MoveValidator.is_valid_move(piece_type, from_row, from_col, to_row, to_col, self.board, piece_color):
             return
 
-        travel_time = 1000
-        arrival_time = self.game_clock + travel_time
+        arrival_time = self.game_clock + MOVE_TRAVEL_TIME
 
         self.ongoing_moves.append((arrival_time, from_row, from_col, to_row, to_col, moving_piece))
         self.pieces_in_flight.add((from_row, from_col))
@@ -150,7 +150,7 @@ class ChessEngine:
                 defender = airborne_cells[(to_row, to_col)]
                 if defender[0] != piece_token[0]:
                     # The arriving piece hits an airborne defender and is destroyed immediately
-                    self.board.set_piece(from_row, from_col, '.')
+                    self.board.set_piece(from_row, from_col, EMPTY_CELL)
                     self.pieces_in_flight.discard((from_row, from_col))
                     continue
 
@@ -161,17 +161,17 @@ class ChessEngine:
                     continue
 
                 current_target = self.board.get_piece(to_row, to_col)
-                if current_target != '.' and current_target[0] == piece_token[0]:
+                if current_target != EMPTY_CELL and current_target[0] == piece_token[0]:
                     self.pieces_in_flight.discard((from_row, from_col))
                     continue
 
-                if current_target != '.' and current_target[1] == 'K':
+                if current_target != EMPTY_CELL and current_target[1] == 'K':
                     self.game_over = True
 
                 if piece_token[1] == 'P' and (to_row == 0 or to_row == self.rows - 1):
                     piece_token = piece_token[0] + 'Q'
 
-                self.board.set_piece(from_row, from_col, '.')
+                self.board.set_piece(from_row, from_col, EMPTY_CELL)
                 self.board.set_piece(to_row, to_col, piece_token)
                 self.pieces_in_flight.discard((from_row, from_col))
                 

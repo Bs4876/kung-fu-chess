@@ -1,3 +1,5 @@
+from constants import EMPTY_CELL
+
 class Board:
     def __init__(self, matrix):
         if matrix is None:
@@ -33,4 +35,4 @@ class Board:
         self._matrix[row][col] = piece
 
     def is_empty(self, row, col):
-        return self.get_piece(row, col) == '.'
+        return self.get_piece(row, col) == EMPTY_CELL

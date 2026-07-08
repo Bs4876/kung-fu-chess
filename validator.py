@@ -1,3 +1,5 @@
+from constants import EMPTY_CELL, WHITE, BLACK, PIECE_TYPES
+
 class BoardValidator:
     """
     Responsible for verifying that the board complies with all game rules
@@ -5,16 +7,16 @@ class BoardValidator:
     """
     def __init__(self):
         # Set of valid chess piece characters
-        self.valid_pieces = {'K', 'Q', 'R', 'B', 'N', 'P'}
+        self.valid_pieces = set(PIECE_TYPES)
 
     def validate_tokens(self, board_lines):
         """Checks if all tokens on the board are legal chess pieces or empty spots."""
         for row in board_lines:
             for token in row:
-                if token == '.':
+                if token == EMPTY_CELL:
                     continue
-                # A valid piece must be 2 characters long, start with 'w' or 'b', and end with a valid piece type
-                if len(token) != 2 or token[0] not in {'w', 'b'} or token[1] not in self.valid_pieces:
+                # A valid piece must be 2 characters long, start with WHITE or BLACK, and end with a valid piece type
+                if len(token) != 2 or token[0] not in {WHITE, BLACK} or token[1] not in self.valid_pieces:
                     return False
         return True
 

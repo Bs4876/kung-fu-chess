@@ -1,19 +1,20 @@
 import pytest
+from constants import EMPTY_CELL
 from board import Board
 
 
 @pytest.fixture
 def standard_board():
     matrix = [
-        ['wK', 'bQ', '.'],
-        ['.', 'wP', 'bR'],
+        ['wK', 'bQ', EMPTY_CELL],
+        [EMPTY_CELL, 'wP', 'bR'],
     ]
     return Board(matrix)
 
 
 def test_get_piece(standard_board):
     assert standard_board.get_piece(0, 0) == 'wK'
-    assert standard_board.get_piece(0, 2) == '.'
+    assert standard_board.get_piece(0, 2) == EMPTY_CELL
     assert standard_board.get_piece(1, 1) == 'wP'
     assert standard_board.get_piece(1, 2) == 'bR'
 
