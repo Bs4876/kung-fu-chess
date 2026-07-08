@@ -4,58 +4,78 @@ class MoveValidator:
         if from_row == to_row and from_col == to_col:
             return False
 
+        validator = MoveValidator._VALIDATORS.get(piece_type)
+        if validator is None:
+            return False
+
+        return validator(from_row, from_col, to_row, to_col, board, piece_color)
+
+    @staticmethod
+    def _validate_pawn(from_row, from_col, to_row, to_col, board, piece_color):
+        d_col = abs(to_col - from_col)
+        row_diff = to_row - from_row
+        target_token = board.get_piece(to_row, to_col)
+        forward_direction = -1 if piece_color == 'w' else 1
+        start_row = board.rows - 1 if piece_color == 'w' else 0
+
+        if d_col == 0:
+            if row_diff == forward_direction:
+                return target_token == '.'
+            if row_diff == 2 * forward_direction and from_row == start_row:
+                if target_token != '.':
+                    return False
+                return MoveValidator._is_path_clear(from_row, from_col, to_row, to_col, board)
+            return False
+
+        if d_col == 1 and row_diff == forward_direction:
+            return target_token != '.'
+
+        return False
+
+    @staticmethod
+    def _validate_king(from_row, from_col, to_row, to_col, board, piece_color):
         d_row = abs(to_row - from_row)
         d_col = abs(to_col - from_col)
-        target_token = board.get_piece(to_row, to_col)
-        board_height = board.rows
+        return d_row <= 1 and d_col <= 1
 
-        # Pawn Specific Movement Logic
-        if piece_type == 'P':
-            forward_direction = -1 if piece_color == 'w' else 1
-            row_diff = to_row - from_row
-            
-            # Match the customized test runner grid constraints:
-            # White pawns spawn on the absolute bottom row, Black pawns spawn on the absolute top row
-            start_row = (board_height - 1) if piece_color == 'w' else 0
+    @staticmethod
+    def _validate_knight(from_row, from_col, to_row, to_col, board, piece_color):
+        d_row = abs(to_row - from_row)
+        d_col = abs(to_col - from_col)
+        return (d_row == 2 and d_col == 1) or (d_row == 1 and d_col == 2)
 
-            # Case A: Forward Movement (1 or 2 steps)
-            if d_col == 0:
-                # 1-step forward
-                if row_diff == forward_direction:
-                    return target_token == '.'
-                # 2-steps forward from its designated starting row
-                elif row_diff == (2 * forward_direction) and from_row == start_row:
-                    if target_token != '.':
-                        return False
-                    return MoveValidator._is_path_clear(from_row, from_col, to_row, to_col, board)
-                return False
-
-            # Case B: Diagonal Capture Movement
-            elif d_col == 1 and row_diff == forward_direction:
-                return target_token != '.'
-
+    @staticmethod
+    def _validate_rook(from_row, from_col, to_row, to_col, board, piece_color):
+        d_row = abs(to_row - from_row)
+        d_col = abs(to_col - from_col)
+        if d_row != 0 and d_col != 0:
             return False
-
-        # Geometry Check for Standard Pieces
-        is_geometry_valid = False
-        if piece_type == 'K':
-            is_geometry_valid = d_row <= 1 and d_col <= 1
-        elif piece_type == 'R':
-            is_geometry_valid = d_row == 0 or d_col == 0
-        elif piece_type == 'B':
-            is_geometry_valid = d_row == d_col
-        elif piece_type == 'Q':
-            is_geometry_valid = (d_row == 0 or d_col == 0) or (d_row == d_col)
-        elif piece_type == 'N':
-            is_geometry_valid = (d_row == 2 and d_col == 1) or (d_row == 1 and d_col == 2)
-
-        if not is_geometry_valid:
-            return False
-
-        if piece_type in ['K', 'N']:
-            return True
-
         return MoveValidator._is_path_clear(from_row, from_col, to_row, to_col, board)
+
+    @staticmethod
+    def _validate_bishop(from_row, from_col, to_row, to_col, board, piece_color):
+        d_row = abs(to_row - from_row)
+        d_col = abs(to_col - from_col)
+        if d_row != d_col:
+            return False
+        return MoveValidator._is_path_clear(from_row, from_col, to_row, to_col, board)
+
+    @staticmethod
+    def _validate_queen(from_row, from_col, to_row, to_col, board, piece_color):
+        d_row = abs(to_row - from_row)
+        d_col = abs(to_col - from_col)
+        if d_row == 0 or d_col == 0 or d_row == d_col:
+            return MoveValidator._is_path_clear(from_row, from_col, to_row, to_col, board)
+        return False
+
+    _VALIDATORS = {
+        'P': _validate_pawn,
+        'K': _validate_king,
+        'N': _validate_knight,
+        'R': _validate_rook,
+        'B': _validate_bishop,
+        'Q': _validate_queen,
+    }
 
     @staticmethod
     def _is_path_clear(from_row, from_col, to_row, to_col, board):
