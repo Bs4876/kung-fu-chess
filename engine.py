@@ -1,10 +1,11 @@
+from board import Board
 from movement import MoveValidator
 
 class ChessEngine:
     def __init__(self, board_matrix):
-        self.board = board_matrix
-        self.rows = len(board_matrix)
-        self.cols = len(board_matrix[0]) if self.rows > 0 else 0
+        self.board = Board(board_matrix)
+        self.rows = self.board.rows
+        self.cols = self.board.cols
         self.selected_pos = None
         self.game_clock = 0
         self.ongoing_moves = []
@@ -42,7 +43,7 @@ class ChessEngine:
         if (row, col) in self.pieces_in_flight and self.selected_pos is None:
             return
 
-        token = self.board[row][col]
+        token = self.board.get_piece(row, col)
 
         if token != '.':
             if self.selected_pos is None:
@@ -51,7 +52,7 @@ class ChessEngine:
                 curr_row, curr_col = self.selected_pos
                 if curr_row == row and curr_col == col:
                     self._execute_jump(row, col)
-                elif token[0] == self.board[curr_row][curr_col][0]:
+                elif token[0] == self.board.get_piece(curr_row, curr_col)[0]:
                     self.selected_pos = (row, col)
                 else:
                     self._execute_move(curr_row, curr_col, row, col)
@@ -69,11 +70,12 @@ class ChessEngine:
 
     def print_board(self):
         self._refresh_board_state()
-        for row in self.board:
-            print(" ".join(row))
+        for row in range(self.rows):
+            line = [self.board.get_piece(row, col) for col in range(self.cols)]
+            print(" ".join(line))
 
     def _execute_jump(self, row, col):
-        jumping_piece = self.board[row][col]
+        jumping_piece = self.board.get_piece(row, col)
         if jumping_piece == '.':
             return
 
@@ -89,8 +91,8 @@ class ChessEngine:
         if self.game_over:
             return
 
-        moving_piece = self.board[from_row][from_col]
-        target_piece = self.board[to_row][to_col]
+        moving_piece = self.board.get_piece(from_row, from_col)
+        target_piece = self.board.get_piece(to_row, to_col)
         
         if moving_piece == '.':
             return
@@ -148,17 +150,17 @@ class ChessEngine:
                 defender = airborne_cells[(to_row, to_col)]
                 if defender[0] != piece_token[0]:
                     # The arriving piece hits an airborne defender and is destroyed immediately
-                    self.board[from_row][from_col] = '.'
+                    self.board.set_piece(from_row, from_col, '.')
                     self.pieces_in_flight.discard((from_row, from_col))
                     continue
 
             if self.game_clock >= arrival_time:
                 # Execution logic
-                if self.board[from_row][from_col] != move[5]:
+                if self.board.get_piece(from_row, from_col) != move[5]:
                     self.pieces_in_flight.discard((from_row, from_col))
                     continue
 
-                current_target = self.board[to_row][to_col]
+                current_target = self.board.get_piece(to_row, to_col)
                 if current_target != '.' and current_target[0] == piece_token[0]:
                     self.pieces_in_flight.discard((from_row, from_col))
                     continue
@@ -169,8 +171,8 @@ class ChessEngine:
                 if piece_token[1] == 'P' and (to_row == 0 or to_row == self.rows - 1):
                     piece_token = piece_token[0] + 'Q'
 
-                self.board[from_row][from_col] = '.'
-                self.board[to_row][to_col] = piece_token
+                self.board.set_piece(from_row, from_col, '.')
+                self.board.set_piece(to_row, to_col, piece_token)
                 self.pieces_in_flight.discard((from_row, from_col))
                 
                 if self.game_over:

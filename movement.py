@@ -6,8 +6,8 @@ class MoveValidator:
 
         d_row = abs(to_row - from_row)
         d_col = abs(to_col - from_col)
-        target_token = board[to_row][to_col]
-        board_height = len(board)
+        target_token = board.get_piece(to_row, to_col)
+        board_height = board.rows
 
         # Pawn Specific Movement Logic
         if piece_type == 'P':
@@ -66,7 +66,7 @@ class MoveValidator:
         curr_col = from_col + col_step
 
         while curr_row != to_row or curr_col != to_col:
-            if board[curr_row][curr_col] != '.':
+            if board.get_piece(curr_row, curr_col) != '.':
                 return False
             curr_row += row_step
             curr_col += col_step
