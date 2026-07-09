@@ -114,7 +114,8 @@ class ChessEngine:
         if not MoveValidator.is_valid_move(piece_type, from_row, from_col, to_row, to_col, self.board, piece_color):
             return
 
-        arrival_time = self.game_clock + MOVE_TRAVEL_TIME
+        distance = max(abs(to_row - from_row), abs(to_col - from_col))
+        arrival_time = self.game_clock + distance * MOVE_TRAVEL_TIME
 
         self.ongoing_moves.append((arrival_time, from_row, from_col, to_row, to_col, moving_piece))
         self.pieces_in_flight.add((from_row, from_col))
@@ -166,7 +167,7 @@ class ChessEngine:
                 if current_target != EMPTY_CELL and current_target[1] == 'K':
                     self.game_over = True
 
-                if piece_token[1] == 'P' and self.rows >= 8 and (to_row == 0 or to_row == self.rows - 1):
+                if piece_token[1] == 'P' and (to_row == 0 or to_row == self.rows - 1):
                     piece_token = piece_token[0] + 'Q'
 
                 self.board.set_piece(from_row, from_col, EMPTY_CELL)
