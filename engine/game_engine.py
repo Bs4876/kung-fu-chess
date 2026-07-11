@@ -11,9 +11,14 @@ class MoveResult:
 
 
 class GameSnapshot:
-    def __init__(self, board: Board, game_over: bool):
-        self.board = board
+    def __init__(self, rows: int, cols: int, pieces: dict, game_over: bool):
+        self.rows = rows
+        self.cols = cols
+        self._pieces = pieces
         self.game_over = game_over
+
+    def get_piece(self, pos) -> str:
+        return self._pieces.get((pos.row, pos.col), EMPTY)
 
 
 class GameEngine:
@@ -26,14 +31,6 @@ class GameEngine:
     @property
     def game_over(self) -> bool:
         return self._game_over
-
-    def request_jump(self, pos: Position) -> None:
-        if self._game_over or self._arbiter.has_active_motion():
-            return
-        token = self._board.get_piece(pos)
-        if token == EMPTY:
-            return
-        self._arbiter.start_jump(token, pos)
 
     def request_move(self, source: Position, destination: Position) -> MoveResult:
         if self._game_over:
@@ -56,7 +53,14 @@ class GameEngine:
             self._apply_arrival(event)
 
     def snapshot(self) -> GameSnapshot:
-        return GameSnapshot(self._board, self._game_over)
+        pieces = {}
+        for r in range(self._board.rows):
+            for c in range(self._board.cols):
+                from model.position import Position as P
+                token = self._board.get_piece(P(r, c))
+                if token != EMPTY:
+                    pieces[(r, c)] = token
+        return GameSnapshot(self._board.rows, self._board.cols, pieces, self._game_over)
 
     def _apply_arrival(self, event) -> None:
         src, dst = event.src, event.dst
@@ -68,18 +72,7 @@ class GameEngine:
         if target != EMPTY and target[0] == event.piece_token[0]:
             return
 
-        airborne = event.airborne_dsts
-        if dst in airborne and airborne[dst][0] != event.piece_token[0]:
-            self._board.replace_piece(src, EMPTY)
-            return
-
         if target != EMPTY and target[1] == "K":
             self._game_over = True
 
-        token = event.piece_token
-        if token[1] == "P" and (dst.row == 0 or dst.row == self._board.rows - 1):
-            token = token[0] + "Q"
-
         self._board.move_piece(src, dst)
-        if token != event.piece_token:
-            self._board.replace_piece(dst, token)

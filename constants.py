@@ -1,6 +1,0 @@
-EMPTY_CELL = '.'
-WHITE = 'w'
-BLACK = 'b'
-PIECE_TYPES = ['P', 'K', 'N', 'R', 'B', 'Q']
-JUMP_TRAVEL_TIME = 1000
-MOVE_TRAVEL_TIME = 1000

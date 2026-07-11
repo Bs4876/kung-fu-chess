@@ -1,6 +1,6 @@
 from model.board import Board, EMPTY
 from model.position import Position
-from game_engine_pkg.game_engine import GameEngine
+from engine.game_engine import GameEngine
 
 
 def board_from(rows):
@@ -88,5 +88,14 @@ def test_snapshot_returns_board_and_game_over():
     b = board_from(["wR . .", ". . .", ". . ."])
     engine = GameEngine(b)
     snap = engine.snapshot()
-    assert snap.board is b
+    assert snap.get_piece(Position(0, 0)) == "wR"
     assert not snap.game_over
+
+
+def test_snapshot_get_piece_delegates_to_board():
+    b = board_from(["wR . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    snap = engine.snapshot()
+    assert snap.get_piece(Position(0, 0)) == "wR"
+    assert snap.get_piece(Position(0, 1)) == EMPTY
+

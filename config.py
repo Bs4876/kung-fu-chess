@@ -1,0 +1,3 @@
+CELL_SIZE = 100
+PIECE_SPEED = 100  # pixels per second
+MOVE_TRAVEL_TIME_PER_CELL = 1000  # ms per cell

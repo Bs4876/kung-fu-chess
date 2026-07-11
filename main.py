@@ -1,17 +1,20 @@
 # Repository URL: https://github.com/Bs4876/kung-fu-chess-server
 
 import sys
-from game_io.board_parser import BoardParser
-from game_io.board_printer import BoardPrinter
-from game_engine_pkg.game_engine import GameEngine
-from model.board import EMPTY
-from model.position import Position
+from chess_io.board_parser import BoardParser
+from chess_io.board_printer import BoardPrinter
+from engine.game_engine import GameEngine
+from input.board_mapper import BoardMapper
+from input.controller import Controller
+from config import CELL_SIZE
 
-CELL_SIZE = 100
 
+def main(parser=None, stdin=None, stdout=None):
+    stdin = stdin or sys.stdin
+    stdout = stdout or sys.stdout
+    parser = parser or BoardParser()
 
-def main():
-    input_text = sys.stdin.read().strip()
+    input_text = stdin.read().strip()
     if not input_text:
         return
 
@@ -19,25 +22,25 @@ def main():
     board_lines, command_lines = _split_input(lines)
 
     if not board_lines:
-        print("ERROR No Board definition found")
+        print("ERROR No Board definition found", file=stdout)
         return
 
-    parser = BoardParser()
     try:
         board = parser.parse("\n".join(board_lines))
     except ValueError as e:
         msg = str(e)
         if "Inconsistent" in msg:
-            print("ERROR ROW_WIDTH_MISMATCH")
+            print("ERROR ROW_WIDTH_MISMATCH", file=stdout)
         elif "Invalid token" in msg:
-            print("ERROR UNKNOWN_TOKEN")
+            print("ERROR UNKNOWN_TOKEN", file=stdout)
         else:
-            print(f"ERROR {msg}")
+            print(f"ERROR {msg}", file=stdout)
         return
 
     engine = GameEngine(board)
     printer = BoardPrinter()
-    selected = [None]
+    mapper = BoardMapper(rows=board.rows, cols=board.cols, cell_size=CELL_SIZE)
+    controller = Controller(engine, mapper)
 
     for command in command_lines:
         parts = command.split()
@@ -45,16 +48,13 @@ def main():
             continue
 
         if parts[0] == "click" and len(parts) == 3:
-            _handle_click(int(parts[1]), int(parts[2]), engine, selected, board)
-
-        elif parts[0] == "jump" and len(parts) == 3:
-            _handle_jump(int(parts[1]), int(parts[2]), engine, selected, board)
+            controller.click(int(parts[1]), int(parts[2]))
 
         elif parts[0] == "wait" and len(parts) == 2:
             engine.wait(int(parts[1]))
 
         elif parts[0] == "print" and len(parts) == 2 and parts[1] == "board":
-            print(printer.print(engine.snapshot().board))
+            print(printer.print(engine.snapshot()), file=stdout)
 
 
 def _split_input(lines):
@@ -80,35 +80,6 @@ def _split_input(lines):
             command_lines.append(line)
 
     return board_lines, command_lines
-
-
-def _handle_click(x, y, engine, selected, board):
-    col, row = x // CELL_SIZE, y // CELL_SIZE
-    pos = Position(row, col)
-
-    if not board.in_bounds(pos):
-        selected[0] = None
-        return
-
-    if selected[0] is None:
-        if board.get_piece(pos) != EMPTY:
-            selected[0] = pos
-    else:
-        token_at_pos = board.get_piece(pos)
-        selected_token = board.get_piece(selected[0])
-        if token_at_pos != EMPTY and selected_token != EMPTY and token_at_pos[0] == selected_token[0]:
-            selected[0] = pos
-        else:
-            engine.request_move(selected[0], pos)
-            selected[0] = None
-
-
-def _handle_jump(x, y, engine, selected, board):
-    col, row = x // CELL_SIZE, y // CELL_SIZE
-    pos = Position(row, col)
-    if board.in_bounds(pos) and board.get_piece(pos) != EMPTY:
-        engine.request_jump(pos)
-        selected[0] = None
 
 
 if __name__ == "__main__":

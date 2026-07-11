@@ -40,3 +40,13 @@ def test_piece_invalid_token_raises():
 def test_piece_invalid_state_raises():
     with pytest.raises(ValueError):
         Piece(color="w", kind="king", cell=Position(0, 0), state="flying")
+
+
+def test_piece_invalid_color_raises():
+    with pytest.raises(ValueError):
+        Piece(color="x", kind="king", cell=Position(0, 0))
+
+
+def test_piece_invalid_kind_raises():
+    with pytest.raises(ValueError):
+        Piece(color="w", kind="dragon", cell=Position(0, 0))

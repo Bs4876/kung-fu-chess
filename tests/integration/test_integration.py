@@ -176,57 +176,24 @@ def test_enemy_collision_black_started_first():
     assert run("Board:\nwR . . bR\nCommands:\nclick 350 50\nclick 50 50\nclick 50 50\nclick 350 50\nwait 3000\nprint board") == "bR . . ."
 
 
+
 # ── Pawn rules ───────────────────────────────────────────────────────────────
 
-def test_white_pawn_double_from_start_valid():
-    assert run("Board:\n. . .\n. . .\n. . .\n. wP .\nCommands:\nclick 150 350\nclick 150 150\nwait 2000\nprint board") == ". . .\n. wP .\n. . .\n. . ."
+def test_white_pawn_moves_one_step():
+    assert run("Board:\n. . .\n. wP .\n. . .\nCommands:\nclick 150 150\nclick 150 50\nwait 1000\nprint board") == ". wP .\n. . .\n. . ."
 
 
-def test_black_pawn_double_from_start_valid():
-    assert run("Board:\n. bP .\n. . .\n. . .\n. . .\nCommands:\nclick 150 50\nclick 150 250\nwait 2000\nprint board") == ". . .\n. . .\n. bP .\n. . ."
+def test_black_pawn_moves_one_step():
+    assert run("Board:\n. . .\n. bP .\n. . .\nCommands:\nclick 150 150\nclick 150 250\nwait 1000\nprint board") == ". . .\n. . .\n. bP ."
 
 
-def test_white_pawn_double_blocked_invalid():
-    assert run("Board:\n. . .\n. . .\n. bR .\n. wP .\nCommands:\nclick 150 350\nclick 150 150\nwait 2000\nprint board") == ". . .\n. . .\n. bR .\n. wP ."
+def test_pawn_no_double_move():
+    assert run("Board:\n. . .\n. . .\n. wP .\nCommands:\nclick 150 250\nclick 150 50\nwait 2000\nprint board") == ". . .\n. . .\n. wP ."
 
 
-def test_white_pawn_double_from_non_start_invalid():
-    assert run("Board:\n. . .\n. . .\n. wP .\n. . .\nCommands:\nclick 150 250\nclick 150 50\nwait 2000\nprint board") == ". . .\n. . .\n. wP .\n. . ."
+def test_pawn_captures_diagonally():
+    assert run("Board:\nbP . .\n. wP .\n. . .\nCommands:\nclick 150 150\nclick 50 50\nwait 1000\nprint board") == "wP . .\n. . .\n. . ."
 
 
-def test_white_pawn_promotes_to_queen():
-    assert run("Board:\n. . .\n. wP .\nCommands:\nclick 150 150\nclick 150 50\nwait 1000\nprint board") == ". wQ .\n. . ."
-
-
-def test_black_pawn_promotes_to_queen():
-    assert run("Board:\n. bP .\n. . .\nCommands:\nclick 150 50\nclick 150 150\nwait 1000\nprint board") == ". . .\n. bQ ."
-
-
-def test_promoted_queen_moves_diagonal():
-    assert run("Board:\n. . .\n. wP .\n. . .\nCommands:\nclick 150 150\nclick 150 50\nwait 1000\nclick 150 50\nclick 250 150\nwait 1000\nprint board") == ". . .\n. . wQ\n. . ."
-
-
-# ── Jump (Extra Route) ───────────────────────────────────────────────────────
-
-def test_jump_lands_same_square():
-    assert run("Board:\n. . .\n. wK .\n. . .\nCommands:\njump 150 150\nwait 1000\nprint board") == ". . .\n. wK .\n. . ."
-
-
-def test_airborne_piece_captures_arriving_enemy():
-    assert run("Board:\n. . .\nwK bR .\n. . .\nCommands:\njump 50 150\nclick 150 150\nclick 50 150\nwait 1000\nprint board") == ". . .\nwK . .\n. . ."
-
-
-def test_jump_too_late_does_not_save_piece():
-    assert run("Board:\n. . .\nwK bR .\n. . .\nCommands:\nclick 150 150\nclick 50 150\nwait 1000\njump 50 150\nprint board") == ". . .\nbR . .\n. . ."
-
-
-def test_enemy_arrives_after_landing_captures_normally():
-    assert run("Board:\n. . . .\nwK . . bR\n. . . .\nCommands:\njump 50 150\nwait 1000\nclick 350 150\nclick 50 150\nwait 3000\nprint board") == ". . . .\nbR . . .\n. . . ."
-
-
-def test_cannot_jump_while_moving():
-    assert run("Board:\nwR . .\nCommands:\nclick 50 50\nclick 250 50\nwait 500\njump 50 50\nwait 1500\nprint board") == ". . wR"
-
-
-def test_airborne_capture_only_enemy():
-    assert run("Board:\n. . .\nwK wR .\n. . .\nCommands:\njump 50 150\nclick 150 150\nclick 50 150\nwait 1000\nprint board") == ". . .\nwK wR .\n. . ."
+def test_pawn_cannot_capture_forward():
+    assert run("Board:\n. bR .\n. wP .\n. . .\nCommands:\nclick 150 150\nclick 150 50\nwait 1000\nprint board") == ". bR .\n. wP .\n. . ."

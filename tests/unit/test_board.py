@@ -23,15 +23,17 @@ def test_set_and_get_piece():
     assert b.get_piece(Position(0, 1)) == "wR"
 
 
+def test_set_piece_with_empty_token_succeeds():
+    b = make_board(2, 2)
+    b.set_piece(Position(0, 0), EMPTY)
+    assert b.get_piece(Position(0, 0)) == EMPTY
+
+
 def test_double_occupancy_raises():
     b = make_board(2, 2)
     b.set_piece(Position(0, 0), "wR")
-    raised = False
-    try:
+    with pytest.raises(ValueError):
         b.set_piece(Position(0, 0), "bK")
-    except ValueError:
-        raised = True
-    assert raised
     assert b.get_piece(Position(0, 0)) == "wR"
 
 
@@ -43,7 +45,7 @@ def test_in_bounds():
     assert not b.in_bounds(Position(0, 3))
 
 
-def test_out_of_bounds_raises():
+def test_get_piece_out_of_bounds_raises():
     b = make_board(2, 2)
     with pytest.raises(IndexError):
         b.get_piece(Position(5, 5))
@@ -53,6 +55,12 @@ def test_set_piece_out_of_bounds_raises():
     b = make_board(2, 2)
     with pytest.raises(IndexError):
         b.set_piece(Position(5, 5), "wR")
+
+
+def test_replace_piece_out_of_bounds_raises():
+    b = make_board(2, 2)
+    with pytest.raises(IndexError):
+        b.replace_piece(Position(5, 5), "wR")
 
 
 def test_move_piece_updates_src_and_dst():

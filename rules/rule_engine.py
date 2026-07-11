@@ -36,11 +36,3 @@ def _token_to_piece(token: str, pos: Position):
     return Piece.from_token(token, pos)
 
 
-_KIND_MAP = {
-    "R": "rook",
-    "B": "bishop",
-    "Q": "queen",
-    "N": "knight",
-    "K": "king",
-    "P": "pawn",
-}

@@ -55,6 +55,7 @@ def test_no_active_motion_after_arrival():
     assert not arb.has_active_motion()
 
 
+
 def test_diagonal_uses_max_distance():
     arb = RealTimeArbiter()
     arb.start_motion("wB", Position(0, 0), Position(3, 3))
