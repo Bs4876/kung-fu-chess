@@ -71,6 +71,13 @@ def test_move_piece_updates_src_and_dst():
     assert b.get_piece(Position(2, 2)) == "wR"
 
 
+def test_replace_piece_with_empty_clears_cell():
+    b = make_board(2, 2)
+    b.set_piece(Position(0, 0), "wR")
+    b.replace_piece(Position(0, 0), EMPTY)
+    assert b.get_piece(Position(0, 0)) == EMPTY
+
+
 def test_inconsistent_row_length_raises():
     with pytest.raises(ValueError):
         Board([[".", "."], ["."]])

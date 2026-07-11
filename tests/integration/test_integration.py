@@ -1,19 +1,12 @@
 import io
-import sys
-import pytest
 import main
 
 
 def run(input_text):
-    original_stdin, original_stdout = sys.stdin, sys.stdout
-    try:
-        sys.stdin = io.StringIO(input_text)
-        sys.stdout = io.StringIO()
-        main.main()
-        return sys.stdout.getvalue().strip()
-    finally:
-        sys.stdin = original_stdin
-        sys.stdout = original_stdout
+    stdin = io.StringIO(input_text)
+    stdout = io.StringIO()
+    main.main(stdin=stdin, stdout=stdout)
+    return stdout.getvalue().strip()
 
 
 # ── Board parsing ────────────────────────────────────────────────────────────

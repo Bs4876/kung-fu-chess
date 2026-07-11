@@ -84,7 +84,23 @@ def test_move_rejected_after_king_captured():
     assert result.reason == "game_over"
 
 
-def test_snapshot_returns_board_and_game_over():
+def test_arrival_skipped_when_piece_no_longer_at_source():
+    b = board_from(["wR . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    engine.request_move(Position(0, 0), Position(0, 2))
+    b.move_piece(Position(0, 0), Position(0, 1))  # piece moved away
+    engine.wait(2000)
+    assert b.get_piece(Position(0, 2)) == EMPTY
+
+
+def test_arrival_skipped_when_friendly_at_destination():
+    b = board_from(["wR . wP", ". . .", ". . ."])
+    engine = GameEngine(b)
+    # force a motion directly on arbiter to bypass rule check
+    engine._arbiter.start_motion("wR", Position(0, 0), Position(0, 2))
+    engine.wait(2000)
+    assert b.get_piece(Position(0, 0)) == "wR"
+    assert b.get_piece(Position(0, 2)) == "wP"
     b = board_from(["wR . .", ". . .", ". . ."])
     engine = GameEngine(b)
     snap = engine.snapshot()
