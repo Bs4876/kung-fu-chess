@@ -215,6 +215,38 @@ def test_move_of_other_piece_allowed_while_first_piece_jumping():
     assert result.is_accepted
 
 
+def test_colliding_pieces_are_removed_from_board():
+    b = board_from(["wR . . . bR", ". . . . .", ". . . . ."])
+    engine = GameEngine(b)
+    engine.request_move(Position(0, 0), Position(0, 4))
+    engine.request_move(Position(0, 4), Position(0, 0))
+    engine.wait(4000)
+    assert b.get_piece(Position(0, 0)) == EMPTY
+    assert b.get_piece(Position(0, 4)) == EMPTY
+
+
+def test_collision_skipped_when_piece_no_longer_at_position():
+    b = board_from(["wR . . . bR", ". . . . .", ". . . . ."])
+    engine = GameEngine(b)
+    engine._arbiter.start_motion("wR", Position(0, 0), Position(0, 4))
+    engine._arbiter.start_motion("bR", Position(0, 4), Position(0, 0))
+    b.move_piece(Position(0, 0), Position(1, 0))  # wR relocated before the collision resolves
+    engine.wait(4000)
+    assert b.get_piece(Position(0, 4)) == EMPTY
+    assert b.get_piece(Position(1, 0)) == "wR"
+
+
+def test_king_destroyed_in_collision_ends_game():
+    b = board_from(["wK . . . bR", ". . . . .", ". . . . ."])
+    engine = GameEngine(b)
+    engine._arbiter.start_motion("wK", Position(0, 0), Position(0, 4))
+    engine._arbiter.start_motion("bR", Position(0, 4), Position(0, 0))
+    engine.wait(4000)
+    assert engine.game_over
+    assert b.get_piece(Position(0, 0)) == EMPTY
+    assert b.get_piece(Position(0, 4)) == EMPTY
+
+
 def test_airborne_collision_removes_attacker():
     # wR moves 1 cell (arrives at 1000ms); bR jump started 500ms earlier so still airborne at 1000ms
     b = board_from(["wR bR .", ". . .", ". . ."])

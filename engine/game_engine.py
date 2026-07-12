@@ -2,6 +2,7 @@ from model.board import Board, EMPTY
 from model.position import Position
 from rules.rule_engine import RuleEngine
 from realtime.real_time_arbiter import RealTimeArbiter
+from realtime.motion import CollisionEvent
 
 
 class MoveResult:
@@ -59,7 +60,17 @@ class GameEngine:
     def wait(self, ms: int) -> None:
         events = self._arbiter.advance_time(ms)
         for event in events:
-            self._apply_arrival(event)
+            if isinstance(event, CollisionEvent):
+                self._apply_collision(event)
+            else:
+                self._apply_arrival(event)
+
+    def _apply_collision(self, event: CollisionEvent) -> None:
+        if self._board.get_piece(event.pos) != event.piece_token:
+            return
+        self._board.replace_piece(event.pos, EMPTY)
+        if event.piece_token[1] == "K":
+            self._game_over = True
 
     def snapshot(self) -> GameSnapshot:
         return GameSnapshot(self._board, self._game_over)

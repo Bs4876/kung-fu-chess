@@ -162,6 +162,17 @@ def test_opposite_colors_move_concurrently_extra_route():
     assert run("Board:\nwR . .\n. . .\nbR . .\nCommands:\nclick 50 50\nclick 250 50\nclick 50 250\nclick 250 250\nwait 2000\nprint board") == ". . wR\n. . .\n. . bR"
 
 
+# ── Collision between moving pieces ──────────────────────────────────────────
+
+def test_head_on_paths_destroy_both_pieces():
+    assert run(
+        "Board:\nwR . . . bR\nCommands:\n"
+        "click 50 50\nclick 450 50\n"
+        "click 450 50\nclick 50 50\n"
+        "wait 4000\nprint board"
+    ) == ". . . . ."
+
+
 # ── Capture and game over ────────────────────────────────────────────────────
 
 def test_king_capture_ends_game():

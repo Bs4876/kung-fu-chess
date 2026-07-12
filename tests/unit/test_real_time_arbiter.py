@@ -1,5 +1,6 @@
 from model.position import Position
 from realtime.real_time_arbiter import RealTimeArbiter
+from realtime.motion import Motion, ArrivalEvent, CollisionEvent
 
 
 def test_no_active_motion_initially():
@@ -127,3 +128,95 @@ def test_multiple_concurrent_motions_tracked_independently():
     assert arb.has_active_motion_for(Position(0, 0))
     assert arb.has_active_motion_for(Position(2, 2))
     assert not arb.has_active_motion_for(Position(0, 2))
+
+
+# ── Motion.path_positions ─────────────────────────────────────────────────────
+
+def test_path_positions_for_straight_horizontal_motion():
+    m = Motion("wR", Position(0, 0), Position(0, 3), start_time=0)
+    assert m.path_positions() == [
+        (1000, Position(0, 1)),
+        (2000, Position(0, 2)),
+        (3000, Position(0, 3)),
+    ]
+
+
+def test_path_positions_for_diagonal_motion():
+    m = Motion("bB", Position(2, 0), Position(0, 2), start_time=0)
+    assert m.path_positions() == [
+        (1000, Position(1, 1)),
+        (2000, Position(0, 2)),
+    ]
+
+
+def test_path_positions_empty_for_knight_shaped_motion():
+    m = Motion("wN", Position(0, 0), Position(2, 1), start_time=0)
+    assert m.path_positions() == []
+
+
+# ── Collision between moving pieces ──────────────────────────────────────────
+
+def test_head_on_swap_with_even_distance_collides_and_cancels_both():
+    arb = RealTimeArbiter()
+    arb.start_motion("wR", Position(0, 0), Position(0, 4))
+    arb.start_motion("bR", Position(0, 4), Position(0, 0))
+    events = arb.advance_time(4000)
+    assert len(events) == 2
+    assert all(isinstance(e, CollisionEvent) for e in events)
+    assert {e.piece_token for e in events} == {"wR", "bR"}
+    assert not arb.has_active_motion_for(Position(0, 0))
+    assert not arb.has_active_motion_for(Position(0, 4))
+
+
+def test_collision_fires_exactly_at_shared_tick():
+    arb = RealTimeArbiter()
+    arb.start_motion("wR", Position(0, 0), Position(0, 4))
+    arb.start_motion("bR", Position(0, 4), Position(0, 0))
+    events = arb.advance_time(1999)
+    assert events == []
+    assert arb.has_active_motion_for(Position(0, 0))
+    events = arb.advance_time(1)
+    assert len(events) == 2
+    assert not arb.has_active_motion_for(Position(0, 0))
+
+
+def test_crossing_perpendicular_paths_collide():
+    arb = RealTimeArbiter()
+    arb.start_motion("wR", Position(0, 0), Position(0, 4))  # passes (0,2) at t=2000
+    arb.start_motion("bB", Position(2, 0), Position(0, 2))  # arrives (0,2) at t=2000
+    events = arb.advance_time(2000)
+    assert len(events) == 2
+    assert all(isinstance(e, CollisionEvent) for e in events)
+    assert not arb.has_active_motion_for(Position(0, 0))
+    assert not arb.has_active_motion_for(Position(2, 0))
+
+
+def test_odd_distance_head_on_paths_do_not_collide():
+    arb = RealTimeArbiter()
+    arb.start_motion("wR", Position(0, 0), Position(0, 3))
+    arb.start_motion("bR", Position(0, 3), Position(0, 0))
+    events = arb.advance_time(3000)
+    assert len(events) == 2
+    assert all(isinstance(e, ArrivalEvent) for e in events)
+
+
+def test_unrelated_motions_do_not_collide():
+    arb = RealTimeArbiter()
+    arb.start_motion("wR", Position(0, 0), Position(0, 1))
+    arb.start_motion("bR", Position(2, 0), Position(2, 1))
+    events = arb.advance_time(1000)
+    assert len(events) == 2
+    assert all(isinstance(e, ArrivalEvent) for e in events)
+
+
+def test_third_unrelated_motion_unaffected_by_earlier_collided_pair():
+    arb = RealTimeArbiter()
+    arb.start_motion("wR", Position(0, 0), Position(0, 4))
+    arb.start_motion("bR", Position(0, 4), Position(0, 0))
+    arb.start_motion("wB", Position(5, 5), Position(5, 6))
+    events = arb.advance_time(4000)
+    assert len(events) == 3
+    collided_tokens = {e.piece_token for e in events if isinstance(e, CollisionEvent)}
+    assert collided_tokens == {"wR", "bR"}
+    arrived_tokens = {e.piece_token for e in events if isinstance(e, ArrivalEvent)}
+    assert arrived_tokens == {"wB"}
