@@ -54,7 +54,8 @@ class GameEngine:
         if not validation.is_valid:
             return MoveResult(False, validation.reason)
         token = self._board.get_piece(source)
-        self._arbiter.start_motion(token, source, destination)
+        expected_target = self._board.get_piece(destination)
+        self._arbiter.start_motion(token, source, destination, expected_target=expected_target)
         return MoveResult(True, "ok")
 
     def wait(self, ms: int) -> None:
@@ -78,6 +79,8 @@ class GameEngine:
     def _apply_arrival(self, event) -> None:
         src, dst = event.src, event.dst
         if self._board.get_piece(src) != event.piece_token:
+            return
+        if event.expected_target is not None and self._board.get_piece(dst) != event.expected_target:
             return
         target = self._board.get_piece(dst)
         if target != EMPTY and target[0] == event.piece_token[0]:

@@ -173,6 +173,17 @@ def test_head_on_paths_destroy_both_pieces():
     ) == ". . . . ."
 
 
+# ── Cancel when target is captured before arrival ────────────────────────────
+
+def test_capture_cancelled_when_target_vacates_before_arrival():
+    assert run(
+        "Board:\nwR . bQ\n. . .\n. . .\nCommands:\n"
+        "click 50 50\nclick 250 50\n"
+        "click 250 50\nclick 250 150\n"
+        "wait 2000\nprint board"
+    ) == "wR . .\n. . bQ\n. . ."
+
+
 # ── Capture and game over ────────────────────────────────────────────────────
 
 def test_king_capture_ends_game():

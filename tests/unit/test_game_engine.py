@@ -215,6 +215,36 @@ def test_move_of_other_piece_allowed_while_first_piece_jumping():
     assert result.is_accepted
 
 
+def test_capture_cancelled_when_target_changes_before_arrival():
+    b = board_from(["wR . bN", ". . .", ". . ."])
+    engine = GameEngine(b)
+    engine.request_move(Position(0, 0), Position(0, 2))  # wR commits to capturing bN
+    b.replace_piece(Position(0, 2), EMPTY)
+    b.replace_piece(Position(0, 2), "bB")  # a different enemy piece takes the cell first
+    engine.wait(2000)
+    assert b.get_piece(Position(0, 0)) == "wR"  # motion cancelled, wR stayed put
+    assert b.get_piece(Position(0, 2)) == "bB"  # bB untouched
+
+
+def test_move_to_empty_square_cancelled_when_occupied_before_arrival():
+    b = board_from(["wR . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    engine.request_move(Position(0, 0), Position(0, 2))  # target empty when accepted
+    b.replace_piece(Position(0, 2), "bP")  # someone else got there first
+    engine.wait(2000)
+    assert b.get_piece(Position(0, 0)) == "wR"
+    assert b.get_piece(Position(0, 2)) == "bP"
+
+
+def test_capture_proceeds_when_target_unchanged():
+    b = board_from(["wR . bN", ". . .", ". . ."])
+    engine = GameEngine(b)
+    engine.request_move(Position(0, 0), Position(0, 2))
+    engine.wait(2000)
+    assert b.get_piece(Position(0, 0)) == EMPTY
+    assert b.get_piece(Position(0, 2)) == "wR"
+
+
 def test_colliding_pieces_are_removed_from_board():
     b = board_from(["wR . . . bR", ". . . . .", ". . . . ."])
     engine = GameEngine(b)

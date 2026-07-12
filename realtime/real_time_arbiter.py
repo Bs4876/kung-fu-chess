@@ -19,9 +19,8 @@ class RealTimeArbiter:
     def airborne_destinations(self) -> dict:
         return {m.dst: m.piece_token for m in self._jumps}
 
-    def start_motion(self, piece_token: str, src: Position, dst: Position) -> None:
-        
-        self._motions.append(Motion(piece_token, src, dst, self._clock))
+    def start_motion(self, piece_token: str, src: Position, dst: Position, expected_target: str = None) -> None:
+        self._motions.append(Motion(piece_token, src, dst, self._clock, expected_target=expected_target))
 
     def start_jump(self, piece_token: str, pos: Position) -> None:
         self._jumps.append(Motion(piece_token, pos, pos, self._clock, JUMP_TRAVEL_TIME))
@@ -33,10 +32,13 @@ class RealTimeArbiter:
 
         arrived_jumps = [m for m in self._jumps if self._clock >= m.arrival_time]
         self._jumps = [m for m in self._jumps if self._clock < m.arrival_time]
-        arrived_moves = [m for m in self._motions if self._clock >= m.arrival_time]
+        arrived_moves = sorted(
+            (m for m in self._motions if self._clock >= m.arrival_time),
+            key=lambda m: m.arrival_time,
+        )
         self._motions = [m for m in self._motions if self._clock < m.arrival_time]
         airborne_dsts = {m.dst: m.piece_token for m in self._jumps + arrived_jumps}
-        events = [ArrivalEvent(m.piece_token, m.src, m.dst, airborne_dsts) for m in arrived_moves]
+        events = [ArrivalEvent(m.piece_token, m.src, m.dst, airborne_dsts, m.expected_target) for m in arrived_moves]
         events += [ArrivalEvent(m.piece_token, m.src, m.dst, {}) for m in arrived_jumps]
         return collision_events + events
 

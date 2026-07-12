@@ -209,6 +209,30 @@ def test_unrelated_motions_do_not_collide():
     assert all(isinstance(e, ArrivalEvent) for e in events)
 
 
+# ── Target-changed cancellation (expected_target) ────────────────────────────
+
+def test_start_motion_without_expected_target_defaults_to_none():
+    arb = RealTimeArbiter()
+    arb.start_motion("wR", Position(0, 0), Position(0, 1))
+    events = arb.advance_time(1000)
+    assert events[0].expected_target is None
+
+
+def test_start_motion_propagates_expected_target_to_arrival_event():
+    arb = RealTimeArbiter()
+    arb.start_motion("wR", Position(0, 0), Position(0, 1), expected_target="bP")
+    events = arb.advance_time(1000)
+    assert events[0].expected_target == "bP"
+
+
+def test_arrivals_within_one_wait_are_processed_in_chronological_order():
+    arb = RealTimeArbiter()
+    arb.start_motion("wR", Position(0, 0), Position(0, 2))  # arrives at 2000, started first
+    arb.start_motion("bP", Position(5, 5), Position(5, 6))  # arrives at 1000, started second
+    events = arb.advance_time(2000)
+    assert [e.piece_token for e in events] == ["bP", "wR"]
+
+
 def test_third_unrelated_motion_unaffected_by_earlier_collided_pair():
     arb = RealTimeArbiter()
     arb.start_motion("wR", Position(0, 0), Position(0, 4))
