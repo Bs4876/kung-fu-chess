@@ -1,10 +1,16 @@
 from dataclasses import dataclass, field
+
 from position import Position
 
 _KIND_MAP = {
-    "R": "rook", "B": "bishop", "Q": "queen",
-    "N": "knight", "K": "king", "P": "pawn",
+    "R": "rook",
+    "B": "bishop",
+    "Q": "queen",
+    "N": "knight",
+    "K": "king",
+    "P": "pawn",
 }
+
 _SYMBOL_MAP = {value: key for key, value in _KIND_MAP.items()}
 _VALID_STATES = {"idle", "moving", "captured"}
 

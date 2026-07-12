@@ -1,7 +1,5 @@
 from model.board import Board, EMPTY
-
-VALID_COLORS = {"w", "b"}
-VALID_KINDS = {"R", "B", "Q", "N", "K", "P"}
+from model.piece import _KIND_MAP
 
 
 class BoardParser:
@@ -16,7 +14,7 @@ class BoardParser:
             if len(row) != cols:
                 raise ValueError("Inconsistent row length")
             for token in row:
-                if token != EMPTY and (len(token) != 2 or token[0] not in VALID_COLORS or token[1] not in VALID_KINDS):
+                if token != EMPTY and (len(token) != 2 or token[0] not in ("w", "b") or token[1] not in _KIND_MAP):
                     raise ValueError(f"Invalid token: {token}")
 
         return Board(matrix)

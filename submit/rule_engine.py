@@ -26,7 +26,11 @@ class RuleEngine:
         if target != EMPTY and target[0] == piece[0]:
             return MoveValidation(False, "friendly_destination")
 
-        if destination not in legal_destinations(board, Piece.from_token(piece, source)):
+        if destination not in legal_destinations(board, _token_to_piece(piece, source)):
             return MoveValidation(False, "illegal_piece_move")
 
         return OK
+
+
+def _token_to_piece(token: str, pos: Position):
+    return Piece.from_token(token, pos)

@@ -15,6 +15,7 @@ def main(parser=None, stdin=None, stdout=None):
     input_text = stdin.read().strip()
     if not input_text:
         return
+
     lines = [line.strip() for line in input_text.splitlines()]
     board_lines, command_lines = _split_input(lines)
 
