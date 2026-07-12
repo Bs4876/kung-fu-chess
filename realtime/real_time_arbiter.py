@@ -17,6 +17,7 @@ class RealTimeArbiter:
         return {m.dst: m.piece_token for m in self._jumps}
 
     def start_motion(self, piece_token: str, src: Position, dst: Position) -> None:
+        
         self._motions.append(Motion(piece_token, src, dst, self._clock))
 
     def start_jump(self, piece_token: str, pos: Position) -> None:
