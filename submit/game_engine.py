@@ -7,27 +7,32 @@ from motion import CollisionEvent
 
 class MoveResult:
     def __init__(self, is_accepted: bool, reason: str):
+        """Outcome of a move request: whether it was accepted, and why/why not."""
         self.is_accepted = is_accepted
         self.reason = reason
 
 
 class GameSnapshot:
     def __init__(self, board: Board, game_over: bool):
+        """Read-only view of engine state at a point in time, safe to hand to callers."""
         self._board = board
         self.game_over = game_over
         self.rows = board.rows
         self.cols = board.cols
 
     def get_piece(self, pos) -> str:
+        """Return the token at pos ("." if empty)."""
         return self._board.get_piece(pos)
 
     @property
     def board(self):
+        """The underlying board at the time the snapshot was taken."""
         return self._board
 
 
 class GameEngine:
     def __init__(self, board: Board):
+        """Drive a game on board: validates moves, times real-time motion, applies results."""
         self._board = board
         self._rule_engine = RuleEngine()
         self._arbiter = RealTimeArbiter()
@@ -35,9 +40,11 @@ class GameEngine:
 
     @property
     def game_over(self) -> bool:
+        """Whether a king has been captured and the game has ended."""
         return self._game_over
 
     def request_jump(self, pos: Position) -> None:
+        """Start an in-place motion for the piece at pos, ignored if the game is over or it's already moving."""
         if self._game_over or self._arbiter.has_active_motion_for(pos):
             return
         token = self._board.get_piece(pos)
@@ -46,6 +53,7 @@ class GameEngine:
         self._arbiter.start_jump(token, pos)
 
     def request_move(self, source: Position, destination: Position) -> MoveResult:
+        """Validate and, if legal, start real-time motion of the piece from source to destination."""
         if self._game_over:
             return MoveResult(False, "game_over")
         if self._arbiter.has_active_motion_for(source):
@@ -59,6 +67,7 @@ class GameEngine:
         return MoveResult(True, "ok")
 
     def wait(self, ms: int) -> None:
+        """Advance real-time motion by ms and apply any collisions/arrivals that occur."""
         events = self._arbiter.advance_time(ms)
         for event in events:
             if isinstance(event, CollisionEvent):
@@ -67,6 +76,7 @@ class GameEngine:
                 self._apply_arrival(event)
 
     def _apply_collision(self, event: CollisionEvent) -> None:
+        """Remove a piece that collided mid-motion; ending the game if it was a king."""
         if self._board.get_piece(event.pos) != event.piece_token:
             return
         self._board.replace_piece(event.pos, EMPTY)
@@ -74,9 +84,11 @@ class GameEngine:
             self._game_over = True
 
     def snapshot(self) -> GameSnapshot:
+        """Capture the current board and game-over state as an immutable GameSnapshot."""
         return GameSnapshot(self._board, self._game_over)
 
     def _apply_arrival(self, event) -> None:
+        """Apply a piece's arrival at its destination: capture, promotion, or cancel if preempted."""
         src, dst = event.src, event.dst
         if self._board.get_piece(src) != event.piece_token:
             return
