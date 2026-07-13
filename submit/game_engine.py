@@ -43,14 +43,21 @@ class GameEngine:
         """Whether a king has been captured and the game has ended."""
         return self._game_over
 
-    def request_jump(self, pos: Position) -> None:
-        """Start an in-place motion for the piece at pos, ignored if the game is over or it's already moving."""
-        if self._game_over or self._arbiter.has_active_motion_for(pos):
+    def request_jump(self, source: Position, destination: Position) -> None:
+        """Start a jump from source to destination, bypassing normal move legality.
+
+        Ignored if the game is over, the piece is already moving, or destination is
+        out of bounds. Unlike a move, a jump that lands on an occupied square kills
+        whatever is there even if it's the same color as the jumping piece.
+        """
+        if self._game_over or self._arbiter.has_active_motion_for(source):
             return
-        token = self._board.get_piece(pos)
+        if not self._board.in_bounds(destination):
+            return
+        token = self._board.get_piece(source)
         if token == EMPTY:
             return
-        self._arbiter.start_jump(token, pos)
+        self._arbiter.start_jump(token, source, destination)
 
     def request_move(self, source: Position, destination: Position) -> MoveResult:
         """Validate and, if legal, start real-time motion of the piece from source to destination."""
@@ -94,8 +101,10 @@ class GameEngine:
             return
         if event.expected_target is not None and self._board.get_piece(dst) != event.expected_target:
             return
+        if src == dst:
+            return  # returned to where it already stood; never a real landing
         target = self._board.get_piece(dst)
-        if target != EMPTY and target[0] == event.piece_token[0]:
+        if target != EMPTY and target[0] == event.piece_token[0] and not event.is_jump:
             return
         airborne = event.airborne_dsts
         if dst in airborne and airborne[dst][0] != event.piece_token[0]:
