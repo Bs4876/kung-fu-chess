@@ -46,11 +46,12 @@ class GameEngine:
     def request_jump(self, source: Position, destination: Position) -> None:
         """Start a jump from source to destination, bypassing normal move legality.
 
-        Ignored if the game is over, the piece is already moving, or destination is
-        out of bounds. Unlike a move, a jump that lands on an occupied square kills
-        whatever is there even if it's the same color as the jumping piece.
+        Ignored if the game is over, the piece is already moving, still on
+        cooldown from its last arrival, or destination is out of bounds. Unlike
+        a move, a jump that lands on an occupied square kills whatever is there
+        even if it's the same color as the jumping piece.
         """
-        if self._game_over or self._arbiter.has_active_motion_for(source):
+        if self._game_over or self._arbiter.has_active_motion_for(source) or self._arbiter.is_on_cooldown(source):
             return
         if not self._board.in_bounds(destination):
             return
@@ -65,6 +66,8 @@ class GameEngine:
             return MoveResult(False, "game_over")
         if self._arbiter.has_active_motion_for(source):
             return MoveResult(False, "motion_in_progress")
+        if self._arbiter.is_on_cooldown(source):
+            return MoveResult(False, "cooldown")
         validation = self._rule_engine.validate_move(self._board, source, destination)
         if not validation.is_valid:
             return MoveResult(False, validation.reason)
@@ -118,3 +121,4 @@ class GameEngine:
         self._board.move_piece(src, dst)
         if token != event.piece_token:
             self._board.replace_piece(dst, token)
+        self._arbiter.start_cooldown(dst)
