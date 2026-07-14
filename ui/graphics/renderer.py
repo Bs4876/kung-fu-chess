@@ -20,13 +20,16 @@ class BoardRenderer:
         self._cell_size = cell_size
         self._animators: dict[Position, PieceAnimator] = {}
 
-    def render(self, snapshot, dt_ms: int = 0):
-        """Return a new Img with the board and every piece's current frame drawn on it."""
+    def render(self, snapshot, dt_ms: int = 0, selected: Position | None = None):
+        """Return a new Img with the board, every piece's current frame, and (if
+        given) a highlight border around the selected cell, all drawn on it."""
         self._sync_animators(snapshot)
         self._advance_animators(dt_ms)
 
         canvas = self._sprites.load_board(snapshot.rows, snapshot.cols)
         self._draw_pieces(canvas)
+        if selected is not None:
+            self._draw_selection(canvas, selected)
         return canvas
 
     def _occupied_cells(self, snapshot) -> dict[Position, str]:
@@ -61,3 +64,7 @@ class BoardRenderer:
         for pos, animator in self._animators.items():
             sprite = animator.current_frame()
             sprite.draw_on(canvas, pos.col * self._cell_size, pos.row * self._cell_size)
+
+    def _draw_selection(self, canvas, selected: Position) -> None:
+        highlight = self._sprites.load_selection_highlight()
+        highlight.draw_on(canvas, selected.col * self._cell_size, selected.row * self._cell_size)

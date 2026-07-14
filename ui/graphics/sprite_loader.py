@@ -41,6 +41,11 @@ class SpriteLoader:
         size = (cols * self._cell_size, rows * self._cell_size)
         return Img().read(path, size=size)
 
+    def load_selection_highlight(self) -> Img:
+        """Load the pre-baked transparent border overlay used to mark the selected cell."""
+        path = self._assets_dir / "selection_highlight.png"
+        return Img().read(path, size=(self._cell_size, self._cell_size))
+
     def load_state_config(self, token: str, state: str) -> StateConfig:
         """Return a piece's timing/looping config for one animation state, cached."""
         key = (token, state)
