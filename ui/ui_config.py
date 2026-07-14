@@ -10,7 +10,7 @@ from pathlib import Path
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 
 # Which sprite set to draw pieces with (ui/assets/<SKIN>/<CODE>/states/...).
-SKIN = "pieces1"
+SKIN = "pieces3"
 
 WINDOW_TITLE = "Kung Fu Chess"
 
