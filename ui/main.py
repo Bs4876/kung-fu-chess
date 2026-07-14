@@ -47,7 +47,7 @@ def main() -> None:
         engine.wait(dt_ms)
         fps = next_fps_reading(fps, dt_ms)
 
-        canvas = renderer.render(engine.snapshot())
+        canvas = renderer.render(engine.snapshot(), dt_ms)
         draw_fps_overlay(canvas, fps)
         window.show_frame(canvas)
 

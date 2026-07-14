@@ -1,4 +1,6 @@
-"""Loads the board background and per-piece sprites out of ui/assets, via Img."""
+"""Loads the board background and per-piece animated sprites out of ui/assets, via Img."""
+
+import json
 
 from vendor.img import Img
 
@@ -13,14 +15,25 @@ def token_to_sprite_code(token: str) -> str:
     return kind + color.upper()
 
 
+class StateConfig:
+    """One animation state's timing/looping rules, parsed from its config.json."""
+
+    def __init__(self, frames_per_sec: float, is_loop: bool, next_state: str, frame_count: int):
+        self.frames_per_sec = frames_per_sec
+        self.is_loop = is_loop
+        self.next_state = next_state
+        self.frame_count = frame_count
+
+
 class SpriteLoader:
-    """Loads (and caches) the images needed to draw one frame of the board."""
+    """Loads (and caches) the images and animation configs needed to draw one frame."""
 
     def __init__(self, assets_dir, skin: str, cell_size: int):
         self._assets_dir = assets_dir
         self._skin = skin
         self._cell_size = cell_size
-        self._idle_cache: dict[str, Img] = {}
+        self._frame_cache: dict[tuple[str, str, int], Img] = {}
+        self._config_cache: dict[tuple[str, str], StateConfig] = {}
 
     def load_board(self, rows: int, cols: int) -> Img:
         """Load board.png resized to exactly fit an (rows x cols) board of cells."""
@@ -28,16 +41,33 @@ class SpriteLoader:
         size = (cols * self._cell_size, rows * self._cell_size)
         return Img().read(path, size=size)
 
-    def load_idle_sprite(self, token: str) -> Img:
-        """Return a piece's first idle-state frame, sized to one board cell.
+    def load_state_config(self, token: str, state: str) -> StateConfig:
+        """Return a piece's timing/looping config for one animation state, cached."""
+        key = (token, state)
+        if key not in self._config_cache:
+            self._config_cache[key] = self._read_state_config(token, state)
+        return self._config_cache[key]
 
-        Cached per token so repeated draws don't re-decode the same PNG every frame.
-        """
-        if token not in self._idle_cache:
-            code = token_to_sprite_code(token)
-            path = (
-                self._assets_dir / self._skin / code / "states" / "idle" / "sprites" / "1.png"
-            )
+    def load_frame(self, token: str, state: str, frame_index: int) -> Img:
+        """Return one 1-based numbered sprite frame, sized to one board cell, cached."""
+        key = (token, state, frame_index)
+        if key not in self._frame_cache:
+            path = self._state_dir(token, state) / "sprites" / f"{frame_index}.png"
             size = (self._cell_size, self._cell_size)
-            self._idle_cache[token] = Img().read(path, size=size)
-        return self._idle_cache[token]
+            self._frame_cache[key] = Img().read(path, size=size)
+        return self._frame_cache[key]
+
+    def _read_state_config(self, token: str, state: str) -> StateConfig:
+        state_dir = self._state_dir(token, state)
+        data = json.loads((state_dir / "config.json").read_text())
+        frame_count = len(list((state_dir / "sprites").glob("*.png")))
+        return StateConfig(
+            frames_per_sec=data["graphics"]["frames_per_sec"],
+            is_loop=data["graphics"]["is_loop"],
+            next_state=data["physics"]["next_state_when_finished"],
+            frame_count=frame_count,
+        )
+
+    def _state_dir(self, token: str, state: str):
+        code = token_to_sprite_code(token)
+        return self._assets_dir / self._skin / code / "states" / state
