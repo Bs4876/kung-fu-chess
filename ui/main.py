@@ -1,4 +1,4 @@
-"""Stage 5: pieces glide smoothly between cells instead of snapping on arrival."""
+"""Stage 7: a moves-log sidebar, updated by subscribing to the facade's events."""
 
 import server_bridge  # noqa: F401  (must run before any server-rooted import below)
 
@@ -7,6 +7,7 @@ from animation.animation_clock import Clock
 from chess_io.board_parser import BoardParser
 from config import CELL_SIZE
 from engine.game_engine import GameEngine
+from graphics.hud_renderer import HudRenderer
 from graphics.renderer import BoardRenderer
 from graphics.sprite_loader import SpriteLoader
 from graphics.window import Window
@@ -14,6 +15,7 @@ from input.board_mapper import BoardMapper
 from input.controller import Controller
 from model.starting_position import STARTING_POSITION
 from state.game_facade import GameFacade
+from ui_components.moves_log_panel import MovesLogPanel
 from user_input.mouse_controller import MouseController
 
 
@@ -54,8 +56,13 @@ def draw_fps_overlay(canvas, fps: float) -> None:
 def main() -> None:
     facade = build_facade()
     controller = build_controller(facade)
+
+    moves_log_panel = MovesLogPanel()
+    facade.subscribe(moves_log_panel.handle_event)
+
     sprite_loader = SpriteLoader(ui_config.ASSETS_DIR, ui_config.SKIN, CELL_SIZE)
     renderer = BoardRenderer(sprite_loader, CELL_SIZE)
+    hud = HudRenderer(sprite_loader, ui_config.SIDEBAR_WIDTH)
     window = Window(ui_config.WINDOW_TITLE)
     window.set_mouse_callback(MouseController(controller).handle_event)
     clock = Clock()
@@ -68,11 +75,12 @@ def main() -> None:
 
         # Controller doesn't expose selection via a public API; peeking at its
         # internal state is a pragmatic tradeoff to avoid duplicating it here.
-        canvas = renderer.render(
+        board_canvas = renderer.render(
             snapshot, dt_ms, selected=controller._selected, pending_motions=facade.pending_motions()
         )
-        draw_fps_overlay(canvas, fps)
-        window.show_frame(canvas)
+        scene = hud.compose(board_canvas, moves_log_panel)
+        draw_fps_overlay(scene, fps)
+        window.show_frame(scene)
 
     window.close()
 

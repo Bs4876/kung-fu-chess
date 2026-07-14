@@ -13,3 +13,5 @@ ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 SKIN = "pieces1"
 
 WINDOW_TITLE = "Kung Fu Chess"
+
+SIDEBAR_WIDTH = 320
