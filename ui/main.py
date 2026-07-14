@@ -16,6 +16,7 @@ from input.controller import Controller
 from model.starting_position import STARTING_POSITION
 from state.game_facade import GameFacade
 from ui_components.moves_log_panel import MovesLogPanel
+from ui_components.score_panel import ScorePanel
 from user_input.mouse_controller import MouseController
 
 
@@ -59,6 +60,8 @@ def main() -> None:
 
     moves_log_panel = MovesLogPanel()
     facade.subscribe(moves_log_panel.handle_event)
+    score_panel = ScorePanel()
+    facade.subscribe(score_panel.handle_event)
 
     sprite_loader = SpriteLoader(ui_config.ASSETS_DIR, ui_config.SKIN, CELL_SIZE)
     renderer = BoardRenderer(sprite_loader, CELL_SIZE)
@@ -78,7 +81,7 @@ def main() -> None:
         board_canvas = renderer.render(
             snapshot, dt_ms, selected=controller._selected, pending_motions=facade.pending_motions()
         )
-        scene = hud.compose(board_canvas, moves_log_panel)
+        scene = hud.compose(board_canvas, moves_log_panel, score_panel)
         draw_fps_overlay(scene, fps)
         window.show_frame(scene)
 
