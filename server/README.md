@@ -15,15 +15,22 @@ multiple moves can be in flight at once.
 - A pawn may advance two squares on its first move from its starting row.
 - A pawn reaching the last row promotes to a queen.
 - Capturing the opposing king ends the game.
-- A piece can briefly jump in place (`jump x y`); an enemy that arrives on that
-  square while it's airborne is destroyed instead of capturing it.
+- A piece can jump (`jump x y`) straight to a destination, bypassing normal
+  move legality. Landing on an occupied square destroys whatever is there,
+  even a piece of the same color.
 
 ## Extra Features
 Beyond a single move at a time, this project also supports:
 - **Concurrent motion:** different pieces may move at the same time; a piece
   already in motion rejects a second command for itself.
-- **Mid-flight collision:** two moving pieces whose paths cross the same cell
-  at the same simulated instant are both removed from the board.
+- **Mid-flight collision:** if two moving pieces' paths cross the same cell at
+  the same simulated instant, the outcome depends on color: pieces of
+  different colors collide and whichever started later wins, destroying the
+  earlier piece and continuing on unaffected; pieces of the same color have
+  the later one halt at the last safe cell before the meeting point instead
+  of colliding.
+- **Airborne interception:** while a piece is mid-jump, an enemy move that
+  arrives on its destination square is destroyed instead of completing normally.
 - **Stale-target cancellation:** a move is cancelled instead of completing if
   its destination's occupant changed since the move was accepted.
 
