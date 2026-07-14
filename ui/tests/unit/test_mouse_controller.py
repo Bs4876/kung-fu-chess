@@ -46,3 +46,26 @@ def test_right_click_outside_the_board_does_not_request_a_jump():
     mapper.pixel_to_cell.return_value = None
     mc.handle_event(cv2.EVENT_RBUTTONDOWN, 9999, 9999, 0, None)
     facade.request_jump.assert_not_called()
+
+
+def test_left_clicking_the_already_selected_square_again_jumps_in_place():
+    mc, controller, facade, mapper = build(selected=Position(0, 0))
+    mapper.pixel_to_cell.return_value = Position(0, 0)  # same square clicked again
+    mc.handle_event(cv2.EVENT_LBUTTONDOWN, 50, 50, 0, None)
+    facade.request_jump.assert_called_once_with(Position(0, 0), Position(0, 0))
+    controller.click.assert_not_called()
+
+
+def test_left_clicking_the_same_square_again_clears_the_selection_afterward():
+    mc, controller, facade, mapper = build(selected=Position(0, 0))
+    mapper.pixel_to_cell.return_value = Position(0, 0)
+    mc.handle_event(cv2.EVENT_LBUTTONDOWN, 50, 50, 0, None)
+    assert controller._selected is None
+
+
+def test_left_clicking_a_different_square_while_selected_still_goes_through_controller():
+    mc, controller, facade, mapper = build(selected=Position(0, 0))
+    mapper.pixel_to_cell.return_value = Position(0, 2)  # a different square
+    mc.handle_event(cv2.EVENT_LBUTTONDOWN, 250, 50, 0, None)
+    controller.click.assert_called_once_with(250, 50)
+    facade.request_jump.assert_not_called()

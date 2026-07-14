@@ -1,15 +1,15 @@
 """Build-time generator for the "pieces3" skin - not run by the game itself.
 
 The course-provided skins (pieces1/pieces2) ship hand-drawn animation frames
-per state. ui/IMG/ instead has one static image per piece (no frame
-sequences), so each state's 5 frames here are generated procedurally with
-simple affine transforms (scale/shear), anchored at the bottom so a piece
-never appears to float off its square. Output matches pieces1's exact
-folder/config convention (ui/assets/<SKIN>/<CODE>/states/<STATE>/...), so
-SpriteLoader/PieceAnimator need no changes to use it - only ui_config.SKIN
-has to point at "pieces3".
+per state. ui/assets/pieces3_source/ instead has one static image per piece
+(no frame sequences), so each state's 5 frames here are generated
+procedurally with simple affine transforms (scale/shear), anchored at the
+bottom so a piece never appears to float off its square. Output matches
+pieces1's exact folder/config convention
+(ui/assets/<SKIN>/<CODE>/states/<STATE>/...), so SpriteLoader/PieceAnimator
+need no changes to use it - only ui_config.SKIN has to point at "pieces3".
 
-Re-run this after changing anything in ui/IMG/:
+Re-run this after changing anything in ui/assets/pieces3_source/:
 
     uv run python ui/tools/generate_pieces3_skin.py
 """
@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 _THIS_DIR = Path(__file__).resolve().parent
-SRC_DIR = _THIS_DIR.parent / "IMG"
+SRC_DIR = _THIS_DIR.parent / "assets" / "pieces3_source"
 OUT_DIR = _THIS_DIR.parent / "assets" / "pieces3"
 
 CODES = ["BB", "BW", "KB", "KW", "NB", "NW", "PB", "PW", "QB", "QW", "RB", "RW"]

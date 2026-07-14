@@ -1,9 +1,12 @@
 """Adapts OpenCV's mouse-callback signature to server input.
 
-Left-click reuses server's own Controller (select then move). Right-click
-triggers a jump instead: it takes whatever piece is currently selected as the
-source and jumps it to the clicked cell, bypassing normal move legality - the
-Controller has no concept of jumps, so this talks to the facade directly.
+Left-click reuses server's own Controller for select-then-move, with one
+addition Controller doesn't know about: clicking the *same* already-selected
+square again triggers an in-place jump (a "dodge") instead of Controller's
+normal reselect-same-square no-op. Right-click does a full jump instead: it
+takes whatever piece is currently selected as the source and jumps it to the
+clicked cell, bypassing normal move legality - the Controller has no concept
+of jumps, so both talk to the facade directly.
 """
 
 import cv2
@@ -17,9 +20,17 @@ class MouseController:
 
     def handle_event(self, event, x, y, flags, param) -> None:
         if event == cv2.EVENT_LBUTTONDOWN:
-            self._controller.click(x, y)
+            self._handle_left_click(x, y)
         elif event == cv2.EVENT_RBUTTONDOWN:
             self._handle_jump(x, y)
+
+    def _handle_left_click(self, x, y) -> None:
+        selected = self._controller._selected
+        if selected is not None and self._mapper.pixel_to_cell(x, y) == selected:
+            self._facade.request_jump(selected, selected)
+            self._controller._selected = None
+            return
+        self._controller.click(x, y)
 
     def _handle_jump(self, x, y) -> None:
         source = self._controller._selected
