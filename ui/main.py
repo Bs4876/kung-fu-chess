@@ -1,4 +1,4 @@
-"""Stage 7: a moves-log sidebar, updated by subscribing to the facade's events."""
+"""Stage 9: player names, a game-over banner, and a mid-flight-halt flash."""
 
 import server_bridge  # noqa: F401  (must run before any server-rooted import below)
 
@@ -15,7 +15,10 @@ from input.board_mapper import BoardMapper
 from input.controller import Controller
 from model.starting_position import STARTING_POSITION
 from state.game_facade import GameFacade
+from ui_components.game_over_banner import GameOverBanner
+from ui_components.halt_flash import HaltFlashTracker
 from ui_components.moves_log_panel import MovesLogPanel
+from ui_components.player_labels import PlayerLabels
 from ui_components.score_panel import ScorePanel
 from user_input.mouse_controller import MouseController
 
@@ -62,6 +65,11 @@ def main() -> None:
     facade.subscribe(moves_log_panel.handle_event)
     score_panel = ScorePanel()
     facade.subscribe(score_panel.handle_event)
+    game_over_banner = GameOverBanner()
+    facade.subscribe(game_over_banner.handle_event)
+    halt_flash = HaltFlashTracker()
+    facade.subscribe(halt_flash.handle_event)
+    player_labels = PlayerLabels()
 
     sprite_loader = SpriteLoader(ui_config.ASSETS_DIR, ui_config.SKIN, CELL_SIZE)
     renderer = BoardRenderer(sprite_loader, CELL_SIZE)
@@ -75,13 +83,19 @@ def main() -> None:
         dt_ms = clock.tick()
         snapshot = facade.tick(dt_ms)
         fps = next_fps_reading(fps, dt_ms)
+        halt_flash.tick(dt_ms)
 
         # Controller doesn't expose selection via a public API; peeking at its
         # internal state is a pragmatic tradeoff to avoid duplicating it here.
         board_canvas = renderer.render(
-            snapshot, dt_ms, selected=controller._selected, pending_motions=facade.pending_motions()
+            snapshot,
+            dt_ms,
+            selected=controller._selected,
+            pending_motions=facade.pending_motions(),
+            halted_positions=halt_flash.active_positions(),
+            game_over=game_over_banner.is_game_over,
         )
-        scene = hud.compose(board_canvas, moves_log_panel, score_panel)
+        scene = hud.compose(board_canvas, moves_log_panel, score_panel, player_labels)
         draw_fps_overlay(scene, fps)
         window.show_frame(scene)
 

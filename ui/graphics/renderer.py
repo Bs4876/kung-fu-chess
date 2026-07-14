@@ -28,9 +28,12 @@ class BoardRenderer:
         self._previous_motions: dict[Position, object] = {}
 
     def render(self, snapshot, dt_ms: int = 0, selected: Position | None = None,
-               pending_motions: dict | None = None):
-        """Return a new Img with the board, every piece's current frame, and (if
-        given) a highlight border around the selected cell, all drawn on it."""
+               pending_motions: dict | None = None, halted_positions: list | None = None,
+               game_over: bool = False):
+        """Return a new Img with the board, every piece's current frame, a
+        highlight border around the selected cell (if given), a brief red
+        flash over any just-halted cells (if given), and a game-over banner
+        (if the game has ended), all drawn on it."""
         pending_motions = pending_motions or {}
         occupied = self._occupied_cells(snapshot)
 
@@ -44,6 +47,10 @@ class BoardRenderer:
         self._draw_pieces(canvas, pending_motions)
         if selected is not None:
             self._draw_selection(canvas, selected)
+        for pos in halted_positions or []:
+            self._draw_halt_flash(canvas, pos)
+        if game_over:
+            self._draw_game_over_banner(canvas)
         return canvas
 
     def _occupied_cells(self, snapshot) -> dict[Position, str]:
@@ -126,3 +133,11 @@ class BoardRenderer:
     def _draw_selection(self, canvas, selected: Position) -> None:
         highlight = self._sprites.load_selection_highlight()
         highlight.draw_on(canvas, selected.col * self._cell_size, selected.row * self._cell_size)
+
+    def _draw_halt_flash(self, canvas, position: Position) -> None:
+        flash = self._sprites.load_halt_flash()
+        flash.draw_on(canvas, position.col * self._cell_size, position.row * self._cell_size)
+
+    def _draw_game_over_banner(self, canvas) -> None:
+        board_height = canvas.img.shape[0]
+        canvas.put_text("GAME OVER", self._cell_size, board_height // 2, 1.6, color=(0, 0, 255, 255), thickness=3)

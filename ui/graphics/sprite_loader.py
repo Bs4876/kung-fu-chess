@@ -46,6 +46,11 @@ class SpriteLoader:
         path = self._assets_dir / "selection_highlight.png"
         return Img().read(path, size=(self._cell_size, self._cell_size))
 
+    def load_halt_flash(self) -> Img:
+        """Load the translucent red overlay marking a just-halted cell."""
+        path = self._assets_dir / "halt_flash.png"
+        return Img().read(path, size=(self._cell_size, self._cell_size))
+
     def load_panel_background(self, width: int, height: int) -> Img:
         """Load the solid-color HUD background, resized to any (width, height)."""
         path = self._assets_dir / "panel_background.png"

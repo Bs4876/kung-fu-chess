@@ -18,9 +18,9 @@ class HudRenderer:
         self._sprites = sprite_loader
         self._sidebar_width = sidebar_width
 
-    def compose(self, board_canvas, moves_log_panel, score_panel):
-        """Return a new canvas: the board unchanged on the left, the score and
-        moves log drawn in a sidebar on the right."""
+    def compose(self, board_canvas, moves_log_panel, score_panel, player_labels):
+        """Return a new canvas: the board unchanged on the left, player names,
+        score, and the moves log drawn in a sidebar on the right."""
         board_height, board_width = board_canvas.img.shape[:2]
         full_width = board_width + self._sidebar_width
 
@@ -28,13 +28,17 @@ class HudRenderer:
         board_canvas.draw_on(scene, 0, 0)
 
         x = board_width + _LEFT_PADDING_PX
-        y = self._draw_score(scene, score_panel, x)
+        y = self._draw_score(scene, score_panel, player_labels, x)
         self._draw_moves_log(scene, moves_log_panel, x, y + _SCORE_TO_MOVES_GAP_PX)
         return scene
 
-    def _draw_score(self, scene, score_panel, x: int) -> int:
+    def _draw_score(self, scene, score_panel, player_labels, x: int) -> int:
         y = _TOP_PADDING_PX
-        scene.put_text(score_panel.summary(), x, y, _SCORE_FONT_SIZE, color=_SCORE_COLOR)
+        text = (
+            f"{player_labels.white_name}: {score_panel.white_score}   "
+            f"{player_labels.black_name}: {score_panel.black_score}"
+        )
+        scene.put_text(text, x, y, _SCORE_FONT_SIZE, color=_SCORE_COLOR)
         return y
 
     def _draw_moves_log(self, scene, moves_log_panel, x: int, start_y: int) -> None:
