@@ -1,4 +1,4 @@
-"""Stage 4: click-to-move via the real Controller, with the selected cell highlighted."""
+"""Stage 5: pieces glide smoothly between cells instead of snapping on arrival."""
 
 import server_bridge  # noqa: F401  (must run before any server-rooted import below)
 
@@ -13,20 +13,27 @@ from graphics.window import Window
 from input.board_mapper import BoardMapper
 from input.controller import Controller
 from model.starting_position import STARTING_POSITION
+from state.game_facade import GameFacade
 from user_input.mouse_controller import MouseController
 
 
-def build_engine() -> GameEngine:
-    """Parse the standard opening position into a real, running GameEngine."""
+def build_facade() -> GameFacade:
+    """Parse the standard opening position into a real, running GameEngine,
+    wrapped in a GameFacade so the UI can predict smooth in-flight motion."""
     board = BoardParser().parse(STARTING_POSITION)
-    return GameEngine(board)
+    return GameFacade(GameEngine(board))
 
 
-def build_controller(engine: GameEngine) -> Controller:
-    """Wire up server's own click-to-move Controller against this engine's board size."""
-    snapshot = engine.snapshot()
+def build_controller(facade: GameFacade) -> Controller:
+    """Wire up server's own click-to-move Controller against this facade.
+
+    Controller only calls request_move(...)/snapshot() on whatever it's given,
+    so pointing it at GameFacade instead of the raw engine needs no changes to
+    Controller itself.
+    """
+    snapshot = facade.snapshot()
     mapper = BoardMapper(snapshot.rows, snapshot.cols, CELL_SIZE)
-    return Controller(engine, mapper)
+    return Controller(facade, mapper)
 
 
 def next_fps_reading(previous_fps: float, dt_ms: int) -> float:
@@ -45,8 +52,8 @@ def draw_fps_overlay(canvas, fps: float) -> None:
 
 
 def main() -> None:
-    engine = build_engine()
-    controller = build_controller(engine)
+    facade = build_facade()
+    controller = build_controller(facade)
     sprite_loader = SpriteLoader(ui_config.ASSETS_DIR, ui_config.SKIN, CELL_SIZE)
     renderer = BoardRenderer(sprite_loader, CELL_SIZE)
     window = Window(ui_config.WINDOW_TITLE)
@@ -56,12 +63,14 @@ def main() -> None:
     fps = 0.0
     while window.poll():
         dt_ms = clock.tick()
-        engine.wait(dt_ms)
+        snapshot = facade.tick(dt_ms)
         fps = next_fps_reading(fps, dt_ms)
 
         # Controller doesn't expose selection via a public API; peeking at its
         # internal state is a pragmatic tradeoff to avoid duplicating it here.
-        canvas = renderer.render(engine.snapshot(), dt_ms, selected=controller._selected)
+        canvas = renderer.render(
+            snapshot, dt_ms, selected=controller._selected, pending_motions=facade.pending_motions()
+        )
         draw_fps_overlay(canvas, fps)
         window.show_frame(canvas)
 
