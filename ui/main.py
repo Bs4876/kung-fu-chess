@@ -30,15 +30,18 @@ def build_facade() -> GameFacade:
     return GameFacade(GameEngine(board))
 
 
-def build_controller(facade: GameFacade) -> Controller:
+def build_mapper(facade: GameFacade) -> BoardMapper:
+    snapshot = facade.snapshot()
+    return BoardMapper(snapshot.rows, snapshot.cols, CELL_SIZE)
+
+
+def build_controller(facade: GameFacade, mapper: BoardMapper) -> Controller:
     """Wire up server's own click-to-move Controller against this facade.
 
     Controller only calls request_move(...)/snapshot() on whatever it's given,
     so pointing it at GameFacade instead of the raw engine needs no changes to
     Controller itself.
     """
-    snapshot = facade.snapshot()
-    mapper = BoardMapper(snapshot.rows, snapshot.cols, CELL_SIZE)
     return Controller(facade, mapper)
 
 
@@ -59,7 +62,8 @@ def draw_fps_overlay(canvas, fps: float) -> None:
 
 def main() -> None:
     facade = build_facade()
-    controller = build_controller(facade)
+    mapper = build_mapper(facade)
+    controller = build_controller(facade, mapper)
 
     moves_log_panel = MovesLogPanel()
     facade.subscribe(moves_log_panel.handle_event)
@@ -75,7 +79,7 @@ def main() -> None:
     renderer = BoardRenderer(sprite_loader, CELL_SIZE)
     hud = HudRenderer(sprite_loader, ui_config.SIDEBAR_WIDTH)
     window = Window(ui_config.WINDOW_TITLE)
-    window.set_mouse_callback(MouseController(controller).handle_event)
+    window.set_mouse_callback(MouseController(controller, facade, mapper).handle_event)
     clock = Clock()
 
     fps = 0.0

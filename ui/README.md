@@ -13,7 +13,9 @@ uv run python ui/main.py
 ```
 
 A window opens with the opening position. Click a piece, then click a
-destination square to move it. Esc or the window's close button quits.
+destination square to move it. To jump instead (bypassing normal move
+legality), left-click to select a piece, then **right-click** the
+destination. Esc or the window's close button quits.
 
 ## What it does
 
@@ -30,8 +32,9 @@ destination square to move it. Esc or the window's close button quits.
 - A red flash marks a piece that halted mid-flight (same-color collision); a
   "GAME OVER" banner appears once a king is captured.
 - A piece must rest (`COOLDOWN_MS` in `server/config.py`) after landing before
-  it can be commanded again - trying to move it again immediately is silently
-  rejected, same as any other illegal move.
+  it can be commanded again - trying to move it again immediately is
+  rejected, same as any other illegal move, and shows up in the moves log
+  with its reason (e.g. "cooldown") instead of just doing nothing silently.
 
 ## Testing
 

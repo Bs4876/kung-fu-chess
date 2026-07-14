@@ -4,7 +4,7 @@ Deliberately does no snapshot-diffing of its own - see state/game_facade.py for
 why that bookkeeping is centralized there instead of duplicated in every panel.
 """
 
-from state.game_events import GameOver, MoveAccepted, PieceCaptured, Promotion
+from state.game_events import GameOver, MoveAccepted, MoveRejected, PieceCaptured, Promotion
 
 MAX_VISIBLE_LINES = 20
 
@@ -45,4 +45,9 @@ class MovesLogPanel:
             return f"{_side_name(event.from_token)} promotes to {event.to_token[1]} at {_cell_name(event.position)}"
         if isinstance(event, GameOver):
             return "Game Over"
-        return None  # MoveRejected, PieceArrived, PieceHalted: not log-worthy on their own
+        if isinstance(event, MoveRejected):
+            # Surfacing this matters: Controller/MouseController swallow a
+            # rejected request silently otherwise, which is indistinguishable
+            # from a real bug without some feedback that anything happened.
+            return f"{_cell_name(event.source)}-{_cell_name(event.destination)} rejected: {event.reason}"
+        return None  # PieceArrived, PieceHalted: not log-worthy on their own

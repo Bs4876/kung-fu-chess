@@ -39,9 +39,14 @@ def test_game_over_is_logged():
     assert panel.lines() == ["Game Over"]
 
 
-def test_move_rejected_and_piece_halted_are_not_logged():
+def test_move_rejected_is_logged_with_its_reason():
     panel = MovesLogPanel()
-    panel.handle_event(MoveRejected(source=Position(0, 0), destination=Position(0, 1), reason="illegal_piece_move"))
+    panel.handle_event(MoveRejected(source=Position(0, 0), destination=Position(0, 1), reason="cooldown"))
+    assert panel.lines() == ["a8-b8 rejected: cooldown"]
+
+
+def test_piece_halted_is_not_logged():
+    panel = MovesLogPanel()
     panel.handle_event(PieceHalted(source=Position(2, 0), resting_at=Position(1, 1), token="wB"))
     assert panel.lines() == []
 
