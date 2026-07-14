@@ -30,6 +30,17 @@ def test_stale_target_cancellation_produces_no_events():
     assert diff_completed_motion(motion(src, dst, "wR"), prev, curr) == []
 
 
+def test_in_place_jump_produces_piece_arrived_not_a_silent_cancellation():
+    # Looks identical to a stale-target cancellation from a pure board diff
+    # (the piece never appears to move) - is_jump + source==destination is
+    # what tells them apart.
+    pos = Position(0, 0)
+    prev = FakeSnapshot({pos: "wR"})
+    curr = FakeSnapshot({pos: "wR"})
+    events = diff_completed_motion(motion(pos, pos, "wR", is_jump=True), prev, curr)
+    assert events == [PieceArrived(source=pos, destination=pos, token="wR", is_jump=True)]
+
+
 def test_clean_arrival_onto_empty_square():
     src, dst = Position(0, 0), Position(0, 3)
     prev = FakeSnapshot({src: "wR"})

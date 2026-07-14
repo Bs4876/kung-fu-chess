@@ -159,6 +159,44 @@ def test_request_jump_starts_jump_motion():
     assert b.get_piece(Position(0, 0)) == "wR"  # in-place jump returns to same cell
 
 
+def test_in_place_jump_starts_a_cooldown():
+    b = board_from(["wR . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    engine.request_jump(Position(0, 0), Position(0, 0))
+    engine.wait(1000)  # jump arrives
+    result = engine.request_move(Position(0, 0), Position(0, 1))
+    assert not result.is_accepted
+    assert result.reason == "cooldown"
+    engine.wait(JUMP_COOLDOWN_MS)
+    result2 = engine.request_move(Position(0, 0), Position(0, 1))
+    assert result2.is_accepted
+
+
+def test_in_place_jump_of_a_king_does_not_end_the_game():
+    b = board_from(["wK . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    engine.request_jump(Position(0, 0), Position(0, 0))
+    engine.wait(1000)
+    assert not engine.game_over
+    assert b.get_piece(Position(0, 0)) == "wK"
+
+
+def test_move_halted_back_at_its_own_source_starts_no_cooldown():
+    # Mirrors test_same_color_collision_on_first_step_halts_at_source in
+    # test_real_time_arbiter.py (two same-color rooks meeting on the second
+    # rook's very first step, so it halts right back at its own source): a
+    # move that never actually made progress shouldn't cost a cooldown,
+    # unlike a deliberate in-place jump.
+    b = board_from(["wR . wR . . .", ". . . . . .", ". . . . . ."])
+    engine = GameEngine(b)
+    engine.request_move(Position(0, 0), Position(0, 5))
+    engine.request_move(Position(0, 2), Position(0, 0))
+    engine.wait(1000)
+    assert b.get_piece(Position(0, 2)) == "wR"  # halted at its own source
+    result = engine.request_move(Position(0, 2), Position(0, 1))
+    assert result.is_accepted  # no cooldown penalty for never having moved
+
+
 def test_jump_to_empty_square_relocates_piece():
     b = board_from(["wR . .", ". . .", ". . ."])
     engine = GameEngine(b)

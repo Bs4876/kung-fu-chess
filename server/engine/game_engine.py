@@ -106,7 +106,15 @@ class GameEngine:
         if event.expected_target is not None and self._board.get_piece(dst) != event.expected_target:
             return
         if src == dst:
-            return  # returned to where it already stood; never a real landing
+            # A move redirected/halted back to its own source never actually
+            # went anywhere - no landing, no cooldown. A jump requested onto
+            # its own square (a deliberate in-place "dodge") is a real,
+            # intentional action instead: it still deserves its cooldown, but
+            # skips every other landing check below (there's nothing at dst
+            # to capture/promote/replace - dst *is* the jumping piece itself).
+            if event.is_jump:
+                self._arbiter.start_cooldown(dst, JUMP_COOLDOWN_MS)
+            return
         target = self._board.get_piece(dst)
         if target != EMPTY and target[0] == event.piece_token[0] and not event.is_jump:
             return

@@ -38,6 +38,13 @@ def diff_completed_motion(motion, prev_snapshot, curr_snapshot) -> list:
     what the engine's snapshot shows now - which of the reconciliation cases
     actually happened."""
     if curr_snapshot.get_piece(motion.source) == motion.token:
+        if motion.is_jump and motion.source == motion.destination:
+            # A deliberate in-place jump ("dodge") looks identical to a
+            # stale-target cancellation from a pure board diff - the piece
+            # never appears to move either way - but it's a real, completed
+            # landing (server starts its cooldown the same as any other), so
+            # it needs its own PieceArrived rather than being silently dropped.
+            return [PieceArrived(source=motion.source, destination=motion.destination, token=motion.token, is_jump=True)]
         return []  # stale-target cancellation: it never left, nothing to report
 
     at_destination = curr_snapshot.get_piece(motion.destination)
