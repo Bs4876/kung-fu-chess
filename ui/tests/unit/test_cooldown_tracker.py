@@ -1,4 +1,4 @@
-from config import COOLDOWN_MS
+from config import JUMP_COOLDOWN_MS, MOVE_COOLDOWN_MS
 
 from model.position import Position
 from state.game_events import MoveAccepted, PieceArrived, PieceCaptured, PieceHalted, Promotion
@@ -49,7 +49,7 @@ def test_frame_index_starts_near_one_and_increases_toward_frame_count():
     tracker = CooldownTracker()
     tracker.handle_event(PieceArrived(source=Position(0, 0), destination=Position(0, 3), token="wR"))
     first = tracker.active_fade_frames()[Position(0, 3)]
-    tracker.tick(COOLDOWN_MS // 2)
+    tracker.tick(MOVE_COOLDOWN_MS // 2)
     middle = tracker.active_fade_frames()[Position(0, 3)]
     assert first == 1
     assert first < middle <= FRAME_COUNT
@@ -58,5 +58,19 @@ def test_frame_index_starts_near_one_and_increases_toward_frame_count():
 def test_cooldown_expires_and_stops_being_reported():
     tracker = CooldownTracker()
     tracker.handle_event(PieceArrived(source=Position(0, 0), destination=Position(0, 3), token="wR"))
-    tracker.tick(COOLDOWN_MS)
+    tracker.tick(MOVE_COOLDOWN_MS)
     assert tracker.active_fade_frames() == {}
+
+
+def test_a_move_landing_uses_the_move_cooldown_duration():
+    tracker = CooldownTracker()
+    tracker.handle_event(PieceArrived(source=Position(0, 0), destination=Position(0, 3), token="wR", is_jump=False))
+    tracker.tick(JUMP_COOLDOWN_MS)  # long enough for a jump, not for a move
+    assert Position(0, 3) in tracker.active_fade_frames()
+
+
+def test_a_jump_landing_uses_the_shorter_jump_cooldown_duration():
+    tracker = CooldownTracker()
+    tracker.handle_event(PieceArrived(source=Position(0, 0), destination=Position(0, 3), token="wR", is_jump=True))
+    tracker.tick(JUMP_COOLDOWN_MS)
+    assert Position(0, 3) not in tracker.active_fade_frames()

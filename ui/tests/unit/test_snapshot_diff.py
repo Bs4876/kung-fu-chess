@@ -17,8 +17,10 @@ class FakeSnapshot:
         return self._tokens.get(pos, ".")
 
 
-def motion(source, destination, token, expected_target="."):
-    return SimpleNamespace(source=source, destination=destination, token=token, expected_target=expected_target)
+def motion(source, destination, token, expected_target=".", is_jump=False):
+    return SimpleNamespace(
+        source=source, destination=destination, token=token, expected_target=expected_target, is_jump=is_jump
+    )
 
 
 def test_stale_target_cancellation_produces_no_events():
@@ -66,6 +68,14 @@ def test_mid_flight_kill_with_no_replacement_anywhere():
     curr = FakeSnapshot({})  # piece is just gone
     events = diff_completed_motion(motion(src, dst, "wB"), prev, curr)
     assert events == [PieceCaptured(position=src, captured_token="wB", by_token=None)]
+
+
+def test_is_jump_propagates_from_the_motion_to_the_resulting_event():
+    src, dst = Position(0, 0), Position(0, 3)
+    prev = FakeSnapshot({src: "wR"})
+    curr = FakeSnapshot({dst: "wR"})
+    events = diff_completed_motion(motion(src, dst, "wR", is_jump=True), prev, curr)
+    assert events == [PieceArrived(source=src, destination=dst, token="wR", is_jump=True)]
 
 
 def test_frozen_snapshot_is_immune_to_later_mutation_of_the_source():

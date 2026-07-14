@@ -31,10 +31,12 @@ destination. Esc or the window's close button quits.
   `GameFacade` - see `ui/state/game_events.py`.
 - A red flash marks a piece that halted mid-flight (same-color collision); a
   "GAME OVER" banner appears once a king is captured.
-- A piece must rest (`COOLDOWN_MS` in `server/config.py`) after landing before
-  it can be commanded again - trying to move it again immediately is
-  rejected, same as any other illegal move, and shows up in the moves log
-  with its reason (e.g. "cooldown") instead of just doing nothing silently.
+- A piece must rest after landing before it can be commanded again -
+  `MOVE_COOLDOWN_MS` (3s) after a move, the shorter `JUMP_COOLDOWN_MS` (1.5s)
+  after a jump (both in `server/config.py`). Trying to move it again too soon
+  is rejected, same as any other illegal move, and shows up in the moves log
+  with its reason ("cooldown"). A fading yellow overlay on the cooling-down
+  cell mirrors the same duration client-side (`ui/ui_components/cooldown_tracker.py`).
 
 ## Testing
 

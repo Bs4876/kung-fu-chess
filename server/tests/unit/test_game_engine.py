@@ -1,7 +1,7 @@
 from model.board import Board, EMPTY
 from model.position import Position
 from engine.game_engine import GameEngine
-from config import COOLDOWN_MS
+from config import MOVE_COOLDOWN_MS, JUMP_COOLDOWN_MS
 
 
 def board_from(rows):
@@ -273,7 +273,7 @@ def test_move_accepted_once_cooldown_expires():
     engine = GameEngine(b)
     engine.request_move(Position(0, 0), Position(0, 1))
     engine.wait(1000)
-    engine.wait(COOLDOWN_MS)
+    engine.wait(MOVE_COOLDOWN_MS)
     result = engine.request_move(Position(0, 1), Position(0, 2))
     assert result.is_accepted
     assert result.reason == "ok"
@@ -293,7 +293,7 @@ def test_jump_accepted_once_cooldown_expires():
     engine = GameEngine(b)
     engine.request_move(Position(0, 0), Position(0, 1))
     engine.wait(1000)
-    engine.wait(COOLDOWN_MS)
+    engine.wait(MOVE_COOLDOWN_MS)
     engine.request_jump(Position(0, 1), Position(0, 1))
     assert engine._arbiter.has_active_motion_for(Position(0, 1))
 
@@ -305,6 +305,30 @@ def test_cooldown_does_not_block_other_pieces():
     engine.wait(1000)
     result = engine.request_move(Position(2, 0), Position(2, 1))
     assert result.is_accepted
+
+
+def test_cooldown_after_a_jump_uses_the_shorter_jump_duration():
+    b = board_from(["wR . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    engine.request_jump(Position(0, 0), Position(0, 1))
+    engine.wait(1000)  # jump arrives, cooldown starts at (0, 1)
+    still_cooling = engine.request_move(Position(0, 1), Position(0, 2))
+    assert not still_cooling.is_accepted
+    assert still_cooling.reason == "cooldown"
+    engine.wait(JUMP_COOLDOWN_MS)
+    now_ready = engine.request_move(Position(0, 1), Position(0, 2))
+    assert now_ready.is_accepted
+
+
+def test_move_cooldown_is_longer_than_jump_cooldown():
+    b = board_from(["wR . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    engine.request_move(Position(0, 0), Position(0, 1))
+    engine.wait(1000)  # move arrives, cooldown starts at (0, 1)
+    engine.wait(JUMP_COOLDOWN_MS)  # long enough for a jump's cooldown, not a move's
+    still_cooling = engine.request_move(Position(0, 1), Position(0, 2))
+    assert not still_cooling.is_accepted
+    assert still_cooling.reason == "cooldown"
 
 
 def test_capture_cancelled_when_target_changes_before_arrival():

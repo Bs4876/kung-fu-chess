@@ -2,4 +2,5 @@ CELL_SIZE = 100
 PIECE_SPEED = 100  # pixels per second
 MOVE_TRAVEL_TIME_PER_CELL = 1000  # ms per cell
 JUMP_TRAVEL_TIME = 1000  # ms
-COOLDOWN_MS = 500  # ms a piece must rest after arriving before it can move again
+MOVE_COOLDOWN_MS = 3000  # ms a piece must rest after a normal move before it can act again
+JUMP_COOLDOWN_MS = 1500  # ms a piece must rest after a jump before it can act again

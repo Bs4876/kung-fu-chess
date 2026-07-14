@@ -46,17 +46,20 @@ def diff_completed_motion(motion, prev_snapshot, curr_snapshot) -> list:
 
     halted_at = _find_new_resting_cell(motion, prev_snapshot, curr_snapshot)
     if halted_at is not None:
-        return [PieceHalted(source=motion.source, resting_at=halted_at, token=motion.token)]
+        return [PieceHalted(source=motion.source, resting_at=halted_at, token=motion.token, is_jump=motion.is_jump)]
 
-    return [PieceCaptured(position=motion.source, captured_token=motion.token, by_token=None)]
+    return [PieceCaptured(position=motion.source, captured_token=motion.token, by_token=None, is_jump=motion.is_jump)]
 
 
 def _arrival_events(motion, arrived_token: str) -> list:
     if arrived_token != motion.token:
-        return [Promotion(position=motion.destination, from_token=motion.token, to_token=arrived_token)]
+        return [Promotion(position=motion.destination, from_token=motion.token, to_token=arrived_token, is_jump=motion.is_jump)]
     if motion.expected_target != EMPTY:
-        return [PieceCaptured(position=motion.destination, captured_token=motion.expected_target, by_token=motion.token)]
-    return [PieceArrived(source=motion.source, destination=motion.destination, token=motion.token)]
+        return [PieceCaptured(
+            position=motion.destination, captured_token=motion.expected_target, by_token=motion.token,
+            is_jump=motion.is_jump,
+        )]
+    return [PieceArrived(source=motion.source, destination=motion.destination, token=motion.token, is_jump=motion.is_jump)]
 
 
 def _find_new_resting_cell(motion, prev_snapshot, curr_snapshot) -> Position | None:

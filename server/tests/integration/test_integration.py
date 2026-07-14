@@ -145,7 +145,7 @@ def test_can_move_again_after_cooldown_expires():
         "click 50 50\nclick 150 50\n"
         "wait 1000\n"
         "click 150 50\nclick 250 50\n"
-        "wait 500\n"
+        "wait 3000\n"
         "click 150 50\nclick 250 50\n"
         "wait 1000\nprint board"
     ) == ". . wR"
@@ -209,17 +209,15 @@ def test_capture_cancelled_when_target_vacates_before_arrival():
 
 def test_second_move_rejected_during_cooldown_then_accepted_after():
     # A move attempted the instant a piece arrives must be rejected (cooldown);
-    # only the retry issued after the cooldown window (500ms) may start moving.
-    # Printing at t=2000 tells the two timelines apart: a piece that started
-    # moving right away (bug) would already be arriving at the far cell, while
-    # a piece that had to wait out its cooldown (t=1500 start, 1000ms travel)
-    # is still mid-flight and the board still shows it at the near cell.
+    # only the retry issued after the cooldown window (MOVE_COOLDOWN_MS =
+    # 3000ms) may start moving. Printing partway into that retry's own travel
+    # time confirms it actually started moving (not still sitting rejected).
     assert run(
         "Board:\nwR . .\nCommands:\n"
         "click 50 50\nclick 150 50\n"
         "wait 1000\n"
         "click 150 50\nclick 250 50\n"
-        "wait 500\n"
+        "wait 3000\n"
         "click 150 50\nclick 250 50\n"
         "wait 500\nprint board"
     ) == ". wR ."

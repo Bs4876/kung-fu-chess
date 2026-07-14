@@ -29,6 +29,7 @@ class PieceArrived:
     source: Position
     destination: Position
     token: str
+    is_jump: bool = False
 
 
 @dataclass
@@ -39,16 +40,20 @@ class PieceCaptured:
     position: Position
     captured_token: str
     by_token: str | None
+    is_jump: bool = False
 
 
 @dataclass
 class PieceHalted:
     """A piece stopped short of its intended destination - a mid-flight
-    same-color collision - resting at some other cell instead."""
+    same-color collision - resting at some other cell instead. Only ever
+    happens on a move: the arbiter's mid-flight collision math only runs
+    against other moves, never jumps."""
 
     source: Position
     resting_at: Position
     token: str
+    is_jump: bool = False
 
 
 @dataclass
@@ -56,6 +61,7 @@ class Promotion:
     position: Position
     from_token: str
     to_token: str
+    is_jump: bool = False
 
 
 @dataclass

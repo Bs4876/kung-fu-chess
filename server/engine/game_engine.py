@@ -3,6 +3,7 @@ from model.position import Position
 from rules.rule_engine import RuleEngine
 from realtime.real_time_arbiter import RealTimeArbiter
 from realtime.motion import CollisionEvent
+from config import MOVE_COOLDOWN_MS, JUMP_COOLDOWN_MS
 
 
 class MoveResult:
@@ -121,4 +122,5 @@ class GameEngine:
         self._board.move_piece(src, dst)
         if token != event.piece_token:
             self._board.replace_piece(dst, token)
-        self._arbiter.start_cooldown(dst)
+        cooldown_ms = JUMP_COOLDOWN_MS if event.is_jump else MOVE_COOLDOWN_MS
+        self._arbiter.start_cooldown(dst, cooldown_ms)
