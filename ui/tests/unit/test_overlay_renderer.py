@@ -1,0 +1,94 @@
+from graphics.overlay_renderer import OverlayRenderer
+from model.position import Position
+
+
+class FakeOverlay:
+    def __init__(self, name):
+        self.name = name
+
+    def draw_on(self, canvas, x, y):
+        canvas.draws.append((self.name, x, y))
+
+
+class FakeSpriteSource:
+    def load_selection_highlight(self):
+        return FakeOverlay("selection")
+
+    def load_halt_flash(self):
+        return FakeOverlay("halt_flash")
+
+    def load_cooldown_fade_frame(self, frame_index):
+        return FakeOverlay(f"cooldown_fade_{frame_index}")
+
+
+class FakeCanvas:
+    def __init__(self, height=800):
+        self.draws = []
+        self.texts = []
+        self.img = _FakeImg(height)
+
+    def put_text(self, text, x, y, font_size, color=None, thickness=1):
+        self.texts.append((text, x, y))
+
+
+class _FakeImg:
+    def __init__(self, height):
+        self.shape = (height, 800, 4)
+
+
+def build():
+    return OverlayRenderer(FakeSpriteSource(), cell_size=100)
+
+
+def test_no_selection_draws_nothing():
+    overlays = build()
+    canvas = FakeCanvas()
+    overlays.draw(canvas, selected=None, halted_positions=[], cooldown_fade_frames={}, game_over=False)
+    assert canvas.draws == []
+    assert canvas.texts == []
+
+
+def test_selection_is_drawn_at_the_selected_cell_s_pixel():
+    overlays = build()
+    canvas = FakeCanvas()
+    overlays.draw(canvas, selected=Position(1, 2), halted_positions=[], cooldown_fade_frames={}, game_over=False)
+    assert canvas.draws == [("selection", 200, 100)]
+
+
+def test_one_halt_flash_is_drawn_per_position():
+    overlays = build()
+    canvas = FakeCanvas()
+    overlays.draw(canvas, selected=None, halted_positions=[Position(0, 0), Position(1, 1)],
+                   cooldown_fade_frames={}, game_over=False)
+    assert canvas.draws == [("halt_flash", 0, 0), ("halt_flash", 100, 100)]
+
+
+def test_one_cooldown_fade_is_drawn_per_position_frame_pair():
+    overlays = build()
+    canvas = FakeCanvas()
+    overlays.draw(canvas, selected=None, halted_positions=[],
+                   cooldown_fade_frames={Position(2, 0): 3}, game_over=False)
+    assert canvas.draws == [("cooldown_fade_3", 0, 200)]
+
+
+def test_game_over_banner_is_drawn_only_when_game_is_over():
+    overlays = build()
+    canvas = FakeCanvas()
+    overlays.draw(canvas, selected=None, halted_positions=[], cooldown_fade_frames={}, game_over=True)
+    assert canvas.texts == [("GAME OVER", 100, 400)]
+
+
+def test_game_over_false_draws_no_banner():
+    overlays = build()
+    canvas = FakeCanvas()
+    overlays.draw(canvas, selected=None, halted_positions=[], cooldown_fade_frames={}, game_over=False)
+    assert canvas.texts == []
+
+
+def test_all_overlays_can_be_drawn_together_in_order():
+    overlays = build()
+    canvas = FakeCanvas()
+    overlays.draw(canvas, selected=Position(0, 0), halted_positions=[Position(1, 1)],
+                   cooldown_fade_frames={Position(2, 2): 1}, game_over=True)
+    assert canvas.draws == [("selection", 0, 0), ("halt_flash", 100, 100), ("cooldown_fade_1", 200, 200)]
+    assert canvas.texts == [("GAME OVER", 100, 400)]
