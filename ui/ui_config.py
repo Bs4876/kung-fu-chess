@@ -10,11 +10,12 @@ from pathlib import Path
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 
 # Which sprite set to draw pieces with (ui/assets/<SKIN>/<CODE>/states/...).
-SKIN = "pieces3"
+SKIN = "pieces4"
 
 WINDOW_TITLE = "Kung Fu Chess"
 
-SIDEBAR_WIDTH = 320
+SIDEBAR_WIDTH = 320  # total sidebar width (kept for backward compat)
+PANEL_WIDTH = 220    # width of each side panel (left=White, right=Black)
 
 # main.py's FPS overlay.
 FPS_OVERLAY_POSITION = (10, 30)
@@ -44,3 +45,13 @@ COOLDOWN_FADE_FRAME_COUNT = 10
 
 # graphics/window.py
 WINDOW_ESC_KEY = 27
+
+# user_input/zoom_controller.py - board zoom, keyboard-driven (not native OS
+# window dragging - see graphics/window.py's docstring for why). Bounds chosen
+# so every step lands on an integer pixel size at CELL_SIZE=100: 50/75/100/125/
+# 150/175/200. '+'/'=' zoom in (same physical key, shifted or not); '-'/'_' out.
+ZOOM_KEYS_IN = frozenset({ord("+"), ord("=")})
+ZOOM_KEYS_OUT = frozenset({ord("-"), ord("_")})
+ZOOM_MIN_MULTIPLIER = 0.5
+ZOOM_MAX_MULTIPLIER = 2.0
+ZOOM_STEP = 0.25
