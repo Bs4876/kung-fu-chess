@@ -1,0 +1,16 @@
+[project]
+name = "kung-fu-chess"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "opencv-python>=5.0.0.93",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.pyright]
+# ui/ scripts add server/ to sys.path at runtime (see ui/server_bridge.py); tell
+# the language server about it too, so its bare imports (`from model.board import
+# Board`, `from config import CELL_SIZE`, etc.) resolve instead of showing as
+# unresolved-import warnings.
+extraPaths = ["server", "ui"]

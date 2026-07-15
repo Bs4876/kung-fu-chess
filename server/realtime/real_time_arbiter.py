@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 from model.position import Position
 from realtime.motion import Motion, ArrivalEvent, CollisionEvent
 from config import JUMP_TRAVEL_TIME
@@ -9,12 +9,19 @@ class RealTimeArbiter:
         self._clock = 0
         self._motions: List[Motion] = []
         self._jumps: List[Motion] = []
+        self._cooldowns: Dict[Position, int] = {}
 
     def has_active_motion(self) -> bool:
         return len(self._motions) > 0
 
     def has_active_motion_for(self, pos: Position) -> bool:
         return any(m.src == pos for m in self._motions) or any(m.src == pos for m in self._jumps)
+
+    def start_cooldown(self, pos: Position, duration_ms: int) -> None:
+        self._cooldowns[pos] = self._clock + duration_ms
+
+    def is_on_cooldown(self, pos: Position) -> bool:
+        return self._cooldowns.get(pos, -1) > self._clock
 
     def airborne_destinations(self) -> dict:
         return {m.dst: m.piece_token for m in self._jumps}
@@ -64,7 +71,7 @@ class RealTimeArbiter:
                 if earlier.piece_token[0] == later.piece_token[0]:
                     removed.add(later)
                     safe_cell = self._safe_stop_before(later, meet_time)
-                    events.append(ArrivalEvent(later.piece_token, later.src, safe_cell))
+                    events.append(ArrivalEvent(later.piece_token, later.src, safe_cell, is_halt=True))
                 else:
                     removed.add(earlier)
                     events.append(CollisionEvent(earlier.piece_token, earlier.src))

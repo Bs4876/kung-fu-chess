@@ -33,6 +33,8 @@ Beyond a single move at a time, this project also supports:
   arrives on its destination square is destroyed instead of completing normally.
 - **Stale-target cancellation:** a move is cancelled instead of completing if
   its destination's occupant changed since the move was accepted.
+- **Cooldown after arrival:** a piece must rest for `COOLDOWN_MS` after landing
+  (from a move or a jump) before it can be commanded again.
 
 ## Installation
 ```bash

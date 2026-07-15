@@ -135,12 +135,20 @@ def test_single_move_completes_after_arrival():
     assert run("Board:\nwR . .\nCommands:\nclick 50 50\nclick 150 50\nwait 1000\nprint board") == ". wR ."
 
 
-def test_can_move_again_after_arrival_without_cooldown():
-    assert run("Board:\nwR . .\nCommands:\nclick 50 50\nclick 150 50\nwait 1000\nclick 150 50\nclick 250 50\nwait 1000\nprint board") == ". . wR"
+def test_cannot_move_again_immediately_after_arrival():
+    assert run("Board:\nwR . .\nCommands:\nclick 50 50\nclick 150 50\nwait 1000\nclick 150 50\nclick 250 50\nwait 1000\nprint board") == ". wR ."
 
 
-def test_piece_is_ready_after_arrival_without_cooldown():
-    assert run("Board:\nwR . .\nCommands:\nclick 50 50\nclick 150 50\nwait 1000\nclick 150 50\nclick 250 50\nwait 1000\nprint board") == ". . wR"
+def test_can_move_again_after_cooldown_expires():
+    assert run(
+        "Board:\nwR . .\nCommands:\n"
+        "click 50 50\nclick 150 50\n"
+        "wait 1000\n"
+        "click 150 50\nclick 250 50\n"
+        "wait 3000\n"
+        "click 150 50\nclick 250 50\n"
+        "wait 1000\nprint board"
+    ) == ". . wR"
 
 
 def test_moving_piece_ignores_redirect():
@@ -195,6 +203,24 @@ def test_capture_cancelled_when_target_vacates_before_arrival():
         "click 250 50\nclick 250 150\n"
         "wait 2000\nprint board"
     ) == "wR . .\n. . bQ\n. . ."
+
+
+# ── Cooldown after arrival ────────────────────────────────────────────────────
+
+def test_second_move_rejected_during_cooldown_then_accepted_after():
+    # A move attempted the instant a piece arrives must be rejected (cooldown);
+    # only the retry issued after the cooldown window (MOVE_COOLDOWN_MS =
+    # 3000ms) may start moving. Printing partway into that retry's own travel
+    # time confirms it actually started moving (not still sitting rejected).
+    assert run(
+        "Board:\nwR . .\nCommands:\n"
+        "click 50 50\nclick 150 50\n"
+        "wait 1000\n"
+        "click 150 50\nclick 250 50\n"
+        "wait 3000\n"
+        "click 150 50\nclick 250 50\n"
+        "wait 500\nprint board"
+    ) == ". wR ."
 
 
 # ── Capture and game over ────────────────────────────────────────────────────
