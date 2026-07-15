@@ -69,3 +69,25 @@ def test_left_clicking_a_different_square_while_selected_still_goes_through_cont
     mc.handle_event(cv2.EVENT_LBUTTONDOWN, 250, 50, 0, None)
     controller.click.assert_called_once_with(250, 50)
     facade.request_jump.assert_not_called()
+
+
+def test_board_x_offset_is_subtracted_before_forwarding_a_left_click():
+    controller = MagicMock()
+    controller._selected = None
+    facade = MagicMock()
+    mapper = MagicMock()
+    mc = MouseController(controller, facade, mapper, board_x_offset=220)
+    mc.handle_event(cv2.EVENT_LBUTTONDOWN, 270, 50, 0, None)
+    controller.click.assert_called_once_with(50, 50)
+
+
+def test_board_x_offset_is_subtracted_before_mapping_a_right_click():
+    controller = MagicMock()
+    controller._selected = Position(0, 0)
+    facade = MagicMock()
+    mapper = MagicMock()
+    mapper.pixel_to_cell.return_value = Position(0, 2)
+    mc = MouseController(controller, facade, mapper, board_x_offset=220)
+    mc.handle_event(cv2.EVENT_RBUTTONDOWN, 470, 50, 0, None)
+    mapper.pixel_to_cell.assert_called_once_with(250, 50)
+    facade.request_jump.assert_called_once_with(Position(0, 0), Position(0, 2))

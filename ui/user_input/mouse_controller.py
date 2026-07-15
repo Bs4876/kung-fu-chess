@@ -7,18 +7,26 @@ normal reselect-same-square no-op. Right-click does a full jump instead: it
 takes whatever piece is currently selected as the source and jumps it to the
 clicked cell, bypassing normal move legality - the Controller has no concept
 of jumps, so both talk to the facade directly.
+
+board_x_offset accounts for the board no longer starting at the window's own
+pixel (0, 0): HudRenderer draws a side panel to the board's left, so every
+raw mouse coordinate needs that panel's width subtracted before it means
+anything to server's Controller/BoardMapper, which only ever think in
+board-local pixels and have no idea the HUD exists.
 """
 
 import cv2
 
 
 class MouseController:
-    def __init__(self, controller, facade, mapper):
+    def __init__(self, controller, facade, mapper, board_x_offset: int = 0):
         self._controller = controller
         self._facade = facade
         self._mapper = mapper
+        self._board_x_offset = board_x_offset
 
     def handle_event(self, event, x, y, flags, param) -> None:
+        x -= self._board_x_offset
         if event == cv2.EVENT_LBUTTONDOWN:
             self._handle_left_click(x, y)
         elif event == cv2.EVENT_RBUTTONDOWN:
