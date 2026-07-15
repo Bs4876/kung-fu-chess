@@ -1,12 +1,11 @@
 """Tracks a discrete zoom level for the board, driven by keyboard input.
 
-Deliberately not native OS window dragging (see graphics/window.py's docstring
-for why: WINDOW_AUTOSIZE avoids having to translate resized-window screen
-coordinates back into native image pixel coordinates for mouse handling).
-Zoom is instead a multiplier on CELL_SIZE, changed a step at a time by
-dedicated keys - the window itself then resizes automatically on the next
-frame, since WINDOW_AUTOSIZE windows fit themselves to whatever image size
-they're shown next.
+A second, independent way to resize besides dragging the window's edges (see
+graphics/window.py - WINDOW_NORMAL makes the OS window itself user-resizable
+too). Zoom is a multiplier on CELL_SIZE, changed a step at a time by dedicated
+keys, so pieces are re-rendered at a crisper/coarser native resolution rather
+than just stretched - Window.resize_to then grows/shrinks the on-screen
+window to match each step explicitly.
 """
 
 

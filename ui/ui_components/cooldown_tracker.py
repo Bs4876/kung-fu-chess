@@ -10,7 +10,6 @@ for that same landing, via each event's is_jump flag.
 """
 
 from config import JUMP_COOLDOWN_MS, MOVE_COOLDOWN_MS
-from ui_config import COOLDOWN_FADE_FRAME_COUNT
 
 from state.game_events import PieceArrived, PieceCaptured, PieceHalted, Promotion
 
@@ -54,9 +53,8 @@ class CooldownTracker:
                 del self._cooldowns[position]
 
     def active_fade_frames(self) -> dict:
-        """Position -> 1-based fade frame index (1 = just started, higher = more faded)."""
-        frames = {}
-        for position, cooldown in self._cooldowns.items():
-            fraction = min(cooldown.elapsed_ms / cooldown.duration_ms, 1.0)
-            frames[position] = 1 + int(fraction * (COOLDOWN_FADE_FRAME_COUNT - 1))
-        return frames
+        """Position -> fraction (0.0 = just started/most opaque, 1.0 = fully faded)."""
+        return {
+            pos: min(cd.elapsed_ms / cd.duration_ms, 1.0)
+            for pos, cd in self._cooldowns.items()
+        }

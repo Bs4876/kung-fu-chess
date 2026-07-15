@@ -69,24 +69,8 @@ def build_render_stack(cell_size: int) -> tuple[SpriteLoader, BoardRenderer, Hud
     """
     sprite_loader = SpriteLoader(ui_config.ASSETS_DIR, ui_config.SKIN, cell_size)
     renderer = BoardRenderer(sprite_loader, cell_size)
-    hud = HudRenderer(sprite_loader, ui_config.SIDEBAR_WIDTH)
+    hud = HudRenderer(sprite_loader)
     return sprite_loader, renderer, hud
-
-
-def next_fps_reading(previous_fps: float, dt_ms: int) -> float:
-    """Smooth the instantaneous per-frame FPS with an exponential moving average,
-    so the overlay reads steadily instead of flickering every frame."""
-    if dt_ms <= 0:
-        return previous_fps
-    instantaneous = 1000.0 / dt_ms
-    if not previous_fps:
-        return instantaneous
-    return previous_fps * 0.9 + instantaneous * 0.1
-
-
-def draw_fps_overlay(canvas, fps: float) -> None:
-    x, y = ui_config.FPS_OVERLAY_POSITION
-    canvas.put_text(f"FPS: {fps:.0f}", x, y, ui_config.FPS_OVERLAY_FONT_SCALE, color=ui_config.FPS_OVERLAY_COLOR)
 
 
 def main() -> None:
@@ -116,9 +100,9 @@ def main() -> None:
     window.set_mouse_callback(mouse_controller.handle_event)
     clock = Clock()
 
-    fps = 0.0
     while window.poll():
-        if zoom.handle_key(window.consume_key()):
+        zoomed = zoom.handle_key(window.consume_key())
+        if zoomed:
             sprite_loader, renderer, hud = build_render_stack(zoom.cell_size)
             mapper_proxy.replace(BoardMapper(rows, cols, zoom.cell_size))
 
@@ -131,7 +115,6 @@ def main() -> None:
         halt_flash.tick(dt_ms)
         cooldown_tracker.tick(dt_ms)
         snapshot = facade.tick(dt_ms)
-        fps = next_fps_reading(fps, dt_ms)
 
         # Controller doesn't expose selection via a public API; peeking at its
         # internal state is a pragmatic tradeoff to avoid duplicating it here.
@@ -142,10 +125,11 @@ def main() -> None:
             pending_motions=facade.pending_motions(),
             halted_positions=halt_flash.active_positions(),
             game_over=game_over_banner.is_game_over,
-            cooldown_fade_frames=cooldown_tracker.active_fade_frames(),
+            cooldown_fade_fractions=cooldown_tracker.active_fade_frames(),
         )
         scene = hud.compose(board_canvas, moves_log_panel, score_panel, player_labels)
-        draw_fps_overlay(scene, fps)
+        if zoomed:
+            window.resize_to(scene)
         window.show_frame(scene)
 
     window.close()

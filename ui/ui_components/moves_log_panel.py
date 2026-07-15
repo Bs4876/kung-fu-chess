@@ -6,11 +6,7 @@ why that bookkeeping is centralized there instead of duplicated in every panel.
 
 from ui_config import MOVES_LOG_MAX_VISIBLE_LINES
 
-from state.game_events import GameOver, MoveAccepted, MoveRejected, PieceCaptured, Promotion
-
-
-def _side_name(token: str) -> str:
-    return "White" if token[0] == "w" else "Black"
+from state.game_events import MoveAccepted
 
 
 def _cell_name(position) -> str:
@@ -19,35 +15,28 @@ def _cell_name(position) -> str:
     return f"{chr(ord('a') + position.col)}{8 - position.row}"
 
 
+def _format_time(ms: int) -> str:
+    total_sec = ms / 1000.0
+    return f"{total_sec:.1f}s"
+
+
 class MovesLogPanel:
-    """Appends one line per move/capture/promotion/game-over event, in order."""
+    """Keeps two separate move histories: one per side."""
 
     def __init__(self):
-        self._lines: list[str] = []
+        self._white_lines: list[str] = []
+        self._black_lines: list[str] = []
 
     def handle_event(self, event) -> None:
-        line = self._describe(event)
-        if line is not None:
-            self._lines.append(line)
-
-    def lines(self) -> list[str]:
-        """Most recent lines first, capped to what a sidebar can reasonably show."""
-        return list(reversed(self._lines[-MOVES_LOG_MAX_VISIBLE_LINES:]))
-
-    def _describe(self, event) -> str | None:
         if isinstance(event, MoveAccepted):
-            return f"{_side_name(event.token)} {event.token[1]} {_cell_name(event.source)}-{_cell_name(event.destination)}"
-        if isinstance(event, PieceCaptured):
-            if event.by_token is not None:
-                return f"{_side_name(event.by_token)} {event.by_token[1]} captures {event.captured_token} at {_cell_name(event.position)}"
-            return f"{event.captured_token} destroyed at {_cell_name(event.position)}"
-        if isinstance(event, Promotion):
-            return f"{_side_name(event.from_token)} promotes to {event.to_token[1]} at {_cell_name(event.position)}"
-        if isinstance(event, GameOver):
-            return "Game Over"
-        if isinstance(event, MoveRejected):
-            # Surfacing this matters: Controller/MouseController swallow a
-            # rejected request silently otherwise, which is indistinguishable
-            # from a real bug without some feedback that anything happened.
-            return f"{_cell_name(event.source)}-{_cell_name(event.destination)} rejected: {event.reason}"
-        return None  # PieceArrived, PieceHalted: not log-worthy on their own
+            line = f"{event.token[1]} {_cell_name(event.source)}-{_cell_name(event.destination)} [{_format_time(event.timestamp_ms)}]"
+            if event.token[0] == "w":
+                self._white_lines.append(line)
+            else:
+                self._black_lines.append(line)
+
+    def white_lines(self) -> list[str]:
+        return list(reversed(self._white_lines[-MOVES_LOG_MAX_VISIBLE_LINES:]))
+
+    def black_lines(self) -> list[str]:
+        return list(reversed(self._black_lines[-MOVES_LOG_MAX_VISIBLE_LINES:]))

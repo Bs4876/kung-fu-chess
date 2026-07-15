@@ -87,10 +87,19 @@ class PieceRenderer:
     def _sync_motion_states(self, pending_motions: dict) -> None:
         """Switch an animator into move/jump when its motion starts, and back off
         it (into whatever that state's config says comes next) once the motion
-        is gone - reconciled by GameFacade, whether by arrival or otherwise."""
+        is gone - reconciled by GameFacade, whether by arrival or otherwise.
+
+        Also backs off once predicted travel time has fully elapsed (progress
+        >= 1.0), even if GameFacade never reconciles the motion at all - e.g. a
+        jump the engine silently rejected (already moving, on cooldown, out of
+        bounds) never produces a resolving outcome, so without this the motion
+        would sit in pending_motions forever and this loop would keep forcing
+        the animator back into "jump" every time its own next_state finished,
+        an animation that never ends.
+        """
         for pos, animator in self._animators.items():
             motion = pending_motions.get(pos)
-            if motion is not None:
+            if motion is not None and motion.progress < 1.0:
                 desired_state = "jump" if motion.is_jump else "move"
                 if animator.state not in _MOTION_STATES:
                     animator.set_state(desired_state)

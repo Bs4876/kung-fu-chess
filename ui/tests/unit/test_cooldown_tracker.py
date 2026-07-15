@@ -3,7 +3,6 @@ from config import JUMP_COOLDOWN_MS, MOVE_COOLDOWN_MS
 from model.position import Position
 from state.game_events import MoveAccepted, PieceArrived, PieceCaptured, PieceHalted, Promotion
 from ui_components.cooldown_tracker import CooldownTracker
-from ui_config import COOLDOWN_FADE_FRAME_COUNT
 
 
 def test_starts_with_no_active_fades():
@@ -46,14 +45,14 @@ def test_unrelated_events_are_ignored():
     assert tracker.active_fade_frames() == {}
 
 
-def test_frame_index_starts_near_one_and_increases_toward_frame_count():
+def test_fade_fraction_starts_at_zero_and_increases_toward_one():
     tracker = CooldownTracker()
     tracker.handle_event(PieceArrived(source=Position(0, 0), destination=Position(0, 3), token="wR"))
     first = tracker.active_fade_frames()[Position(0, 3)]
     tracker.tick(MOVE_COOLDOWN_MS // 2)
     middle = tracker.active_fade_frames()[Position(0, 3)]
-    assert first == 1
-    assert first < middle <= COOLDOWN_FADE_FRAME_COUNT
+    assert first == 0.0
+    assert first < middle <= 1.0
 
 
 def test_cooldown_expires_and_stops_being_reported():

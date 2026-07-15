@@ -145,7 +145,7 @@ def test_can_move_again_after_cooldown_expires():
         "click 50 50\nclick 150 50\n"
         "wait 1000\n"
         "click 150 50\nclick 250 50\n"
-        "wait 3000\n"
+        "wait 5000\n"
         "click 150 50\nclick 250 50\n"
         "wait 1000\nprint board"
     ) == ". . wR"

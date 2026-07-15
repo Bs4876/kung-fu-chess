@@ -16,13 +16,13 @@ class OverlayRenderer:
         self._cell_size = cell_size
 
     def draw(self, canvas, selected: Position | None, halted_positions: list | None,
-             cooldown_fade_frames: dict | None, game_over: bool) -> None:
+             cooldown_fade_fractions: dict | None, game_over: bool) -> None:
         if selected is not None:
             self._draw_selection(canvas, selected)
         for pos in halted_positions or []:
             self._draw_halt_flash(canvas, pos)
-        for pos, frame_index in (cooldown_fade_frames or {}).items():
-            self._draw_cooldown_fade(canvas, pos, frame_index)
+        for pos, fraction in (cooldown_fade_fractions or {}).items():
+            self._draw_cooldown_fade(canvas, pos, fraction)
         if game_over:
             self._draw_game_over_banner(canvas)
 
@@ -34,8 +34,8 @@ class OverlayRenderer:
         flash = self._sprites.load_halt_flash()
         flash.draw_on(canvas, position.col * self._cell_size, position.row * self._cell_size)
 
-    def _draw_cooldown_fade(self, canvas, position: Position, frame_index: int) -> None:
-        fade = self._sprites.load_cooldown_fade_frame(frame_index)
+    def _draw_cooldown_fade(self, canvas, position: Position, fraction: float) -> None:
+        fade = self._sprites.load_cooldown_fade_frame(fraction)
         fade.draw_on(canvas, position.col * self._cell_size, position.row * self._cell_size)
 
     def _draw_game_over_banner(self, canvas) -> None:

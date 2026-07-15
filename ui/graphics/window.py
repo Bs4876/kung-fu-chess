@@ -11,24 +11,42 @@ from ui_config import WINDOW_ESC_KEY
 class Window:
     """Owns one OpenCV window and its per-frame lifecycle.
 
-    Fixed-size (cv2.WINDOW_AUTOSIZE), not resizable — this avoids having to
-    translate resized-window screen coordinates back into native image pixel
-    coordinates for mouse handling later.
+    User-resizable by dragging its edges (cv2.WINDOW_NORMAL), with
+    WINDOW_KEEPRATIO so a drag never distorts the board into a non-square
+    aspect ratio. This needs no extra mouse-coordinate math: cv2's own Win32
+    backend already reports mouse callback (x, y) in the original image's
+    pixel space, scaled back from whatever on-screen size the user dragged
+    the window to.
     """
 
     def __init__(self, title: str):
         self._title = title
         self._last_key: int | None = None
-        cv2.namedWindow(title, cv2.WINDOW_AUTOSIZE)
+        cv2.namedWindow(title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
 
     def show_frame(self, canvas) -> None:
         """Display one rendered Img canvas as the current frame.
 
-        A WINDOW_AUTOSIZE window automatically resizes itself to fit whatever
-        image it's shown next - a differently-sized canvas (e.g. from a zoom
-        level change) resizes the actual OS window with no extra call needed.
+        Unlike WINDOW_AUTOSIZE, a WINDOW_NORMAL window does *not* resize
+        itself to fit a differently-sized image - it just scales the new
+        canvas into whatever on-screen size it already has. That's exactly
+        what lets the user's own drag-resize stick between frames; see
+        resize_to for the one case (a zoom level change) that should still
+        resize the window explicitly.
         """
         cv2.imshow(self._title, canvas.img)
+
+    def resize_to(self, canvas) -> None:
+        """Resize the OS window to exactly fit canvas.
+
+        Called only right after a zoom level change (see
+        user_input/zoom_controller.py) so keyboard zoom still visibly grows
+        or shrinks the window like it did under WINDOW_AUTOSIZE. Never called
+        on every frame - that would fight the user's own drag-resize by
+        snapping the window back on the very next tick.
+        """
+        height, width = canvas.img.shape[:2]
+        cv2.resizeWindow(self._title, width, height)
 
     def poll(self) -> bool:
         """Pump this frame's window events. Returns False once the window should close
@@ -51,4 +69,10 @@ class Window:
         cv2.setMouseCallback(self._title, handler)
 
     def close(self) -> None:
-        cv2.destroyWindow(self._title)
+        """Destroy the window, tolerating it already being gone - closing via
+        the OS titlebar (not Esc) has cv2 destroy its own window handle first,
+        so this later call would otherwise raise a NULL-window cv2.error."""
+        try:
+            cv2.destroyWindow(self._title)
+        except cv2.error:
+            pass

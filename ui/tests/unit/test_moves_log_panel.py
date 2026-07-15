@@ -1,64 +1,30 @@
 from model.position import Position
-from state.game_events import GameOver, MoveAccepted, MoveRejected, PieceArrived, PieceCaptured, PieceHalted, Promotion
+from state.game_events import MoveAccepted
 from ui_components.moves_log_panel import MovesLogPanel
 
 
-def test_move_accepted_is_logged_with_side_and_cell_names():
+def test_white_move_is_logged_with_cell_names_and_timestamp():
     panel = MovesLogPanel()
-    panel.handle_event(MoveAccepted(source=Position(6, 4), destination=Position(4, 4), token="wP"))
-    assert panel.lines() == ["White P e2-e4"]
+    panel.handle_event(MoveAccepted(source=Position(6, 4), destination=Position(4, 4), token="wP", timestamp_ms=3200))
+    assert panel.white_lines() == ["P e2-e4 [3.2s]"]
+    assert panel.black_lines() == []
 
 
-def test_black_move_is_attributed_to_black():
+def test_black_move_is_logged_separately_from_white():
     panel = MovesLogPanel()
-    panel.handle_event(MoveAccepted(source=Position(1, 4), destination=Position(3, 4), token="bP"))
-    assert panel.lines() == ["Black P e7-e5"]
+    panel.handle_event(MoveAccepted(source=Position(1, 4), destination=Position(3, 4), token="bP", timestamp_ms=2100))
+    assert panel.black_lines() == ["P e7-e5 [2.1s]"]
+    assert panel.white_lines() == []
 
 
-def test_capture_with_a_known_capturer_names_it():
+def test_each_side_s_lines_are_most_recent_first():
     panel = MovesLogPanel()
-    panel.handle_event(PieceCaptured(position=Position(4, 3), captured_token="bP", by_token="wR"))
-    assert panel.lines() == ["White R captures bP at d4"]
+    panel.handle_event(MoveAccepted(source=Position(6, 4), destination=Position(4, 4), token="wP", timestamp_ms=1000))
+    panel.handle_event(MoveAccepted(source=Position(6, 3), destination=Position(4, 3), token="wP", timestamp_ms=5000))
+    assert panel.white_lines() == ["P d2-d4 [5.0s]", "P e2-e4 [1.0s]"]
 
 
-def test_capture_with_no_known_capturer_still_logs_something_useful():
+def test_starts_with_no_lines_for_either_side():
     panel = MovesLogPanel()
-    panel.handle_event(PieceCaptured(position=Position(4, 3), captured_token="wB", by_token=None))
-    assert panel.lines() == ["wB destroyed at d4"]
-
-
-def test_promotion_is_logged():
-    panel = MovesLogPanel()
-    panel.handle_event(Promotion(position=Position(0, 0), from_token="wP", to_token="wQ"))
-    assert panel.lines() == ["White promotes to Q at a8"]
-
-
-def test_game_over_is_logged():
-    panel = MovesLogPanel()
-    panel.handle_event(GameOver())
-    assert panel.lines() == ["Game Over"]
-
-
-def test_move_rejected_is_logged_with_its_reason():
-    panel = MovesLogPanel()
-    panel.handle_event(MoveRejected(source=Position(0, 0), destination=Position(0, 1), reason="cooldown"))
-    assert panel.lines() == ["a8-b8 rejected: cooldown"]
-
-
-def test_piece_halted_is_not_logged():
-    panel = MovesLogPanel()
-    panel.handle_event(PieceHalted(source=Position(2, 0), resting_at=Position(1, 1), token="wB"))
-    assert panel.lines() == []
-
-
-def test_piece_arrived_is_not_logged_separately_from_its_move_accepted():
-    panel = MovesLogPanel()
-    panel.handle_event(PieceArrived(source=Position(0, 0), destination=Position(0, 3), token="wR"))
-    assert panel.lines() == []
-
-
-def test_lines_are_most_recent_first():
-    panel = MovesLogPanel()
-    panel.handle_event(MoveAccepted(source=Position(6, 4), destination=Position(4, 4), token="wP"))
-    panel.handle_event(MoveAccepted(source=Position(1, 4), destination=Position(3, 4), token="bP"))
-    assert panel.lines() == ["Black P e7-e5", "White P e2-e4"]
+    assert panel.white_lines() == []
+    assert panel.black_lines() == []

@@ -15,7 +15,8 @@ uv run python ui/main.py
 A window opens with the opening position. Click a piece, then click a
 destination square to move it. To jump instead (bypassing normal move
 legality), left-click to select a piece, then **right-click** the
-destination. Esc or the window's close button quits.
+destination. `+`/`-` zoom the board in/out (keyboard); the window can also be
+resized by dragging its edges. Esc or the window's close button quits.
 
 ## What it does
 
@@ -26,17 +27,23 @@ destination. Esc or the window's close button quits.
   arrival, predicted client-side and reconciled against the engine's actual
   outcome every frame (see `ui/state/game_facade.py`).
 - Click-to-move via server's own `Controller`/`BoardMapper`, unmodified.
-- A sidebar shows player names, a running score (captures per side), and a
-  move-by-move log, all updated via an Observer/event stream published by
-  `GameFacade` - see `ui/state/game_events.py`.
+- Two side panels (White on the left, Black on the right) show each
+  player's name, a running score, and that side's own move-by-move log, all
+  updated via an Observer/event stream published by `GameFacade` - see
+  `ui/state/game_events.py` and `ui/graphics/hud_renderer.py`.
+- Score is the sum of the piece values of everything that side has captured
+  (`PIECE_VALUES` in `ui/ui_config.py`), not a raw capture count.
+- The moves log records each accepted move as `<piece> <from>-<to> [<time>]`
+  on the mover's own panel; it does not currently list captures, promotions,
+  game-over, or rejected moves.
 - A red flash marks a piece that halted mid-flight (same-color collision); a
   "GAME OVER" banner appears once a king is captured.
 - A piece must rest after landing before it can be commanded again -
-  `MOVE_COOLDOWN_MS` (3s) after a move, the shorter `JUMP_COOLDOWN_MS` (1.5s)
+  `MOVE_COOLDOWN_MS` (5s) after a move, the shorter `JUMP_COOLDOWN_MS` (2s)
   after a jump (both in `server/config.py`). Trying to move it again too soon
-  is rejected, same as any other illegal move, and shows up in the moves log
-  with its reason ("cooldown"). A fading yellow overlay on the cooling-down
-  cell mirrors the same duration client-side (`ui/ui_components/cooldown_tracker.py`).
+  is silently rejected, same as any other illegal move. A fading yellow
+  overlay on the cooling-down cell mirrors the same duration client-side
+  (`ui/ui_components/cooldown_tracker.py`).
 
 ## Testing
 
@@ -53,5 +60,6 @@ automatable - run the app and actually play it. A reasonable manual pass
 covers: a plain move, a capture, a pawn promoting on the last row, two pieces
 moving at once, a same-color collision (one halts before reaching the other),
 trying to move a piece again immediately after it arrives (should be rejected
-by cooldown) and again after ~0.5s (should work), and capturing a king (game
-over banner + no further moves accepted).
+by cooldown) and again after its cooldown elapses (~5s after a move, ~2s
+after a jump - should work), and capturing a king (game over banner + no
+further moves accepted).

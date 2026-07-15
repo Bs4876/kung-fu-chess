@@ -56,11 +56,39 @@ class SpriteLoader:
         path = self._assets_dir / "panel_background.png"
         return Img().read(path, size=(width, height))
 
-    def load_cooldown_fade_frame(self, frame_index: int) -> Img:
-        """Load one pre-baked cooldown-fade overlay frame (1 = just started
-        cooling down/most opaque, higher index = more faded)."""
-        path = self._assets_dir / "cooldown_fade" / f"{frame_index}.png"
-        return Img().read(path, size=(self._cell_size, self._cell_size))
+    def load_cooldown_fade_frame(self, fraction: float) -> Img:
+        """Generate a light-yellow bar that drains top-down as fraction goes 0->1:
+        bottom-anchored, its top edge sinking toward the bottom of the cell.
+
+        The boundary row is alpha-blended by its fractional coverage instead of
+        snapping a whole pixel row at a time, so the drain reads as a smooth
+        motion rather than visibly stepping row by row.
+        """
+        import numpy as np
+        size = self._cell_size
+        exact_filled = size * (1.0 - fraction)
+        filled_rows = int(exact_filled)
+        partial = exact_filled - filled_rows
+        color = (150, 255, 255)  # BGR - light/pale yellow
+        alpha = 160
+
+        overlay = np.zeros((size, size, 4), dtype=np.uint8)
+        if filled_rows > 0:
+            overlay[size - filled_rows:, :, 0] = color[0]
+            overlay[size - filled_rows:, :, 1] = color[1]
+            overlay[size - filled_rows:, :, 2] = color[2]
+            overlay[size - filled_rows:, :, 3] = alpha
+
+        boundary = size - filled_rows - 1
+        if 0 <= boundary < size and partial > 0:
+            overlay[boundary, :, 0] = color[0]
+            overlay[boundary, :, 1] = color[1]
+            overlay[boundary, :, 2] = color[2]
+            overlay[boundary, :, 3] = int(alpha * partial)
+
+        img = Img()
+        img.img = overlay
+        return img
 
     def load_state_config(self, token: str, state: str) -> StateConfig:
         """Return a piece's timing/looping config for one animation state, cached."""

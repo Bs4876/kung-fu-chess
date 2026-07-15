@@ -101,6 +101,25 @@ def test_token_change_at_the_same_cell_replaces_the_animator():
     assert canvas.draws == [("wQ", "idle", 1, 0, 0)]
 
 
+def test_a_motion_never_reconciled_by_the_facade_still_exits_its_move_state_once_progress_completes():
+    # e.g. a rejected jump: GameFacade optimistically starts the pending motion
+    # before the engine confirms it, and a silent rejection (already moving, on
+    # cooldown, out of bounds) never produces a resolving outcome from wait() -
+    # so pending_motions keeps reporting this motion forever. Without capping on
+    # progress, the animator would be forced back into "jump" every time its own
+    # config finishes it, looping that state indefinitely.
+    sprites = FakeSpriteSource({("wR", "jump"): config(is_loop=False, frame_count=1, next_state="short_rest")})
+    renderer = PieceRenderer(sprites, cell_size=100)
+    snapshot = FakeSnapshot({Position(0, 0): "wR"})
+    stuck_motion = FakeMotion(Position(0, 0), Position(0, 2), progress=1.0, is_jump=True)
+
+    for _ in range(3):
+        canvas = FakeCanvas()
+        renderer.draw(canvas, snapshot, dt_ms=16, pending_motions={Position(0, 0): stuck_motion})
+
+    assert canvas.draws[0][1] != "jump"
+
+
 def test_completed_motion_carries_the_animator_to_its_destination_instead_of_resetting_it():
     # "move"'s configured next_state is "long_rest", not "idle" - carrying the
     # existing animator over means it plays THAT, distinguishing it from

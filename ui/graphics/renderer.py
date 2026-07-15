@@ -21,7 +21,7 @@ class BoardRenderer:
 
     def render(self, snapshot, dt_ms: int = 0, selected: Position | None = None,
                pending_motions: dict | None = None, halted_positions: list | None = None,
-               game_over: bool = False, cooldown_fade_frames: dict | None = None):
+               game_over: bool = False, cooldown_fade_fractions: dict | None = None):
         """Return a new Img with the board, every piece's current frame, a
         highlight border around the selected cell (if given), a brief red
         flash over any just-halted cells (if given), a fading yellow overlay
@@ -29,5 +29,5 @@ class BoardRenderer:
         game has ended), all drawn on it."""
         canvas = self._sprites.load_board(snapshot.rows, snapshot.cols)
         self._pieces.draw(canvas, snapshot, dt_ms, pending_motions)
-        self._overlays.draw(canvas, selected, halted_positions, cooldown_fade_frames, game_over)
+        self._overlays.draw(canvas, selected, halted_positions, cooldown_fade_fractions, game_over)
         return canvas

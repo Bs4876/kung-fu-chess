@@ -7,7 +7,7 @@ from graphics.protocols import SpriteSource
 class HudRenderer:
     """Draws board_canvas in the centre, White panel on the left, Black panel on the right."""
 
-    def __init__(self, sprite_loader: SpriteSource, sidebar_width: int):
+    def __init__(self, sprite_loader: SpriteSource):
         self._sprites = sprite_loader
         self._panel_width = ui_config.PANEL_WIDTH
 

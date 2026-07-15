@@ -58,6 +58,24 @@ class MotionTracker:
     def advance_all(self, dt_ms: int) -> None:
         for motion in self._pending.values():
             motion.advance(dt_ms)
+        self._drop_expired()
+
+    def _drop_expired(self) -> None:
+        """Drop any motion whose predicted travel time has fully elapsed
+        without GameFacade ever reconciling it via resolve().
+
+        Normally resolve() removes a motion the same tick its progress hits
+        1.0, since duration_ms is derived from the same constants the server
+        times its own motion with. But a motion the engine silently rejected
+        (or otherwise never resolves - e.g. a jump onto a square another
+        piece got to first) never produces a resolving outcome at all, so
+        without this it would stay pending forever, permanently frozen at its
+        predicted destination pixel - drawn as a stuck ghost duplicate of
+        whatever piece is actually resting there.
+        """
+        expired = [source for source, motion in self._pending.items() if motion.progress >= 1.0]
+        for source in expired:
+            del self._pending[source]
 
     def resolve(self, outcomes) -> list:
         """Drop the pending motion each engine outcome resolved (if any - an
