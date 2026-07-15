@@ -5,7 +5,7 @@ mouse events, and close detection, using cv2 directly instead of Img.
 
 import cv2
 
-_ESC_KEY = 27
+from ui_config import WINDOW_ESC_KEY
 
 
 class Window:
@@ -28,7 +28,7 @@ class Window:
         """Pump this frame's window events. Returns False once the window should close
         (Esc pressed, or closed via the OS titlebar)."""
         key = cv2.waitKey(1) & 0xFF
-        if key == _ESC_KEY:
+        if key == WINDOW_ESC_KEY:
             return False
         return cv2.getWindowProperty(self._title, cv2.WND_PROP_VISIBLE) >= 1
 

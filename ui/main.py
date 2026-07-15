@@ -1,5 +1,3 @@
-"""Stage 9: player names, a game-over banner, and a mid-flight-halt flash."""
-
 import server_bridge  # noqa: F401  (must run before any server-rooted import below)
 
 import ui_config
@@ -58,7 +56,8 @@ def next_fps_reading(previous_fps: float, dt_ms: int) -> float:
 
 
 def draw_fps_overlay(canvas, fps: float) -> None:
-    canvas.put_text(f"FPS: {fps:.0f}", 10, 30, 1.0, color=(0, 255, 0, 255))
+    x, y = ui_config.FPS_OVERLAY_POSITION
+    canvas.put_text(f"FPS: {fps:.0f}", x, y, ui_config.FPS_OVERLAY_FONT_SCALE, color=ui_config.FPS_OVERLAY_COLOR)
 
 
 def main() -> None:

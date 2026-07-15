@@ -10,10 +10,9 @@ for that same landing, via each event's is_jump flag.
 """
 
 from config import JUMP_COOLDOWN_MS, MOVE_COOLDOWN_MS
+from ui_config import COOLDOWN_FADE_FRAME_COUNT
 
 from state.game_events import PieceArrived, PieceCaptured, PieceHalted, Promotion
-
-FRAME_COUNT = 10  # matches the number of pre-baked ui/assets/cooldown_fade/*.png
 
 
 class _Cooldown:
@@ -59,5 +58,5 @@ class CooldownTracker:
         frames = {}
         for position, cooldown in self._cooldowns.items():
             fraction = min(cooldown.elapsed_ms / cooldown.duration_ms, 1.0)
-            frames[position] = 1 + int(fraction * (FRAME_COUNT - 1))
+            frames[position] = 1 + int(fraction * (COOLDOWN_FADE_FRAME_COUNT - 1))
         return frames

@@ -2,9 +2,9 @@
 renderer can flash them briefly, as a visual cue that something unusual (not a
 normal arrival) just happened there."""
 
-from state.game_events import PieceHalted
+from ui_config import HALT_FLASH_DURATION_MS
 
-FLASH_DURATION_MS = 600
+from state.game_events import PieceHalted
 
 
 class HaltFlashTracker:
@@ -13,7 +13,7 @@ class HaltFlashTracker:
 
     def handle_event(self, event) -> None:
         if isinstance(event, PieceHalted):
-            self._remaining_ms[event.resting_at] = FLASH_DURATION_MS
+            self._remaining_ms[event.resting_at] = HALT_FLASH_DURATION_MS
 
     def tick(self, dt_ms: int) -> None:
         for pos in list(self._remaining_ms):

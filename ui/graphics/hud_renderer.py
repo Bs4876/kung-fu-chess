@@ -1,14 +1,6 @@
 """Composes the rendered board with a sidebar (score + moves log) into one scene."""
 
-_TEXT_COLOR = (255, 255, 255, 255)  # BGR(A) white
-_SCORE_COLOR = (0, 255, 0, 255)  # BGR(A) green
-_TITLE_FONT_SIZE = 0.8
-_SCORE_FONT_SIZE = 0.65
-_LINE_FONT_SIZE = 0.55
-_LINE_HEIGHT_PX = 26
-_LEFT_PADDING_PX = 20
-_TOP_PADDING_PX = 30
-_SCORE_TO_MOVES_GAP_PX = 40
+import ui_config
 
 
 class HudRenderer:
@@ -27,24 +19,24 @@ class HudRenderer:
         scene = self._sprites.load_panel_background(full_width, board_height)
         board_canvas.draw_on(scene, 0, 0)
 
-        x = board_width + _LEFT_PADDING_PX
+        x = board_width + ui_config.HUD_LEFT_PADDING_PX
         y = self._draw_score(scene, score_panel, player_labels, x)
-        self._draw_moves_log(scene, moves_log_panel, x, y + _SCORE_TO_MOVES_GAP_PX)
+        self._draw_moves_log(scene, moves_log_panel, x, y + ui_config.HUD_SCORE_TO_MOVES_GAP_PX)
         return scene
 
     def _draw_score(self, scene, score_panel, player_labels, x: int) -> int:
-        y = _TOP_PADDING_PX
+        y = ui_config.HUD_TOP_PADDING_PX
         text = (
             f"{player_labels.white_name}: {score_panel.white_score}   "
             f"{player_labels.black_name}: {score_panel.black_score}"
         )
-        scene.put_text(text, x, y, _SCORE_FONT_SIZE, color=_SCORE_COLOR)
+        scene.put_text(text, x, y, ui_config.HUD_SCORE_FONT_SIZE, color=ui_config.HUD_SCORE_COLOR)
         return y
 
     def _draw_moves_log(self, scene, moves_log_panel, x: int, start_y: int) -> None:
         y = start_y
-        scene.put_text("Moves", x, y, _TITLE_FONT_SIZE, color=_TEXT_COLOR)
+        scene.put_text("Moves", x, y, ui_config.HUD_TITLE_FONT_SIZE, color=ui_config.HUD_TEXT_COLOR)
 
         for line in moves_log_panel.lines():
-            y += _LINE_HEIGHT_PX
-            scene.put_text(line, x, y, _LINE_FONT_SIZE, color=_TEXT_COLOR)
+            y += ui_config.HUD_LINE_HEIGHT_PX
+            scene.put_text(line, x, y, ui_config.HUD_LINE_FONT_SIZE, color=ui_config.HUD_TEXT_COLOR)

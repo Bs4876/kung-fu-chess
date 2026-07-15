@@ -4,9 +4,9 @@ Deliberately does no snapshot-diffing of its own - see state/game_facade.py for
 why that bookkeeping is centralized there instead of duplicated in every panel.
 """
 
-from state.game_events import GameOver, MoveAccepted, MoveRejected, PieceCaptured, Promotion
+from ui_config import MOVES_LOG_MAX_VISIBLE_LINES
 
-MAX_VISIBLE_LINES = 20
+from state.game_events import GameOver, MoveAccepted, MoveRejected, PieceCaptured, Promotion
 
 
 def _side_name(token: str) -> str:
@@ -32,7 +32,7 @@ class MovesLogPanel:
 
     def lines(self) -> list[str]:
         """Most recent lines first, capped to what a sidebar can reasonably show."""
-        return list(reversed(self._lines[-MAX_VISIBLE_LINES:]))
+        return list(reversed(self._lines[-MOVES_LOG_MAX_VISIBLE_LINES:]))
 
     def _describe(self, event) -> str | None:
         if isinstance(event, MoveAccepted):
