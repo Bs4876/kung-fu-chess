@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from model.board import Board, EMPTY
 from model.position import Position
 from rules.rule_engine import RuleEngine
@@ -11,6 +13,48 @@ class MoveResult:
         """Outcome of a move request: whether it was accepted, and why/why not."""
         self.is_accepted = is_accepted
         self.reason = reason
+
+
+@dataclass
+class Arrived:
+    """A piece completed its travel onto a previously-empty destination cell."""
+
+    source: Position
+    destination: Position
+    token: str
+    is_jump: bool = False
+
+
+@dataclass
+class Captured:
+    """An enemy piece is gone: either on arrival (by_token is its capturer),
+    or destroyed mid-flight/airborne (by_token is None - no single capturer)."""
+
+    source: Position
+    position: Position
+    captured_token: str
+    by_token: str | None
+    is_jump: bool = False
+
+
+@dataclass
+class Halted:
+    """A piece stopped short of its intended destination - a mid-flight
+    same-color collision - resting at some other cell instead."""
+
+    source: Position
+    resting_at: Position
+    token: str
+    is_jump: bool = False
+
+
+@dataclass
+class Promoted:
+    source: Position
+    position: Position
+    from_token: str
+    to_token: str
+    is_jump: bool = False
 
 
 class GameSnapshot:
@@ -77,34 +121,47 @@ class GameEngine:
         self._arbiter.start_motion(token, source, destination, expected_target=expected_target)
         return MoveResult(True, "ok")
 
-    def wait(self, ms: int) -> None:
-        """Advance real-time motion by ms and apply any collisions/arrivals that occur."""
+    def wait(self, ms: int) -> list:
+        """Advance real-time motion by ms, apply any collisions/arrivals that
+        occur, and return the domain events (Arrived/Captured/Halted/Promoted)
+        each one actually resolved to - in the same order they were resolved.
+
+        This is the single point where "what happened" is known for certain
+        (capture vs. halt vs. stale-target cancellation, etc.); returning it
+        here means callers never need to re-derive it later by diffing board
+        snapshots before/after.
+        """
         events = self._arbiter.advance_time(ms)
+        outcomes = []
         for event in events:
             if isinstance(event, CollisionEvent):
-                self._apply_collision(event)
+                outcome = self._apply_collision(event)
             else:
-                self._apply_arrival(event)
+                outcome = self._apply_arrival(event)
+            if outcome is not None:
+                outcomes.append(outcome)
+        return outcomes
 
-    def _apply_collision(self, event: CollisionEvent) -> None:
+    def _apply_collision(self, event: CollisionEvent):
         """Remove a piece that collided mid-motion; ending the game if it was a king."""
         if self._board.get_piece(event.pos) != event.piece_token:
-            return
+            return None
         self._board.replace_piece(event.pos, EMPTY)
         if event.piece_token[1] == "K":
             self._game_over = True
+        return Captured(source=event.pos, position=event.pos, captured_token=event.piece_token, by_token=None)
 
     def snapshot(self) -> GameSnapshot:
         """Capture the current board and game-over state as an immutable GameSnapshot."""
         return GameSnapshot(self._board, self._game_over)
 
-    def _apply_arrival(self, event) -> None:
+    def _apply_arrival(self, event):
         """Apply a piece's arrival at its destination: capture, promotion, or cancel if preempted."""
         src, dst = event.src, event.dst
         if self._board.get_piece(src) != event.piece_token:
-            return
+            return None
         if event.expected_target is not None and self._board.get_piece(dst) != event.expected_target:
-            return
+            return None
         if src == dst:
             # A move redirected/halted back to its own source never actually
             # went anywhere - no landing, no cooldown. A jump requested onto
@@ -114,21 +171,34 @@ class GameEngine:
             # to capture/promote/replace - dst *is* the jumping piece itself).
             if event.is_jump:
                 self._arbiter.start_cooldown(dst, JUMP_COOLDOWN_MS)
-            return
+                return Arrived(source=src, destination=dst, token=event.piece_token, is_jump=True)
+            return None
         target = self._board.get_piece(dst)
         if target != EMPTY and target[0] == event.piece_token[0] and not event.is_jump:
-            return
+            return None
         airborne = event.airborne_dsts
         if dst in airborne and airborne[dst][0] != event.piece_token[0]:
             self._board.replace_piece(src, EMPTY)
-            return
+            return Captured(source=src, position=src, captured_token=event.piece_token, by_token=None,
+                             is_jump=event.is_jump)
         if target != EMPTY and target[1] == "K":
             self._game_over = True
         token = event.piece_token
-        if token[1] == "P" and (dst.row == 0 or dst.row == self._board.rows - 1):
+        promoted = token[1] == "P" and (dst.row == 0 or dst.row == self._board.rows - 1)
+        if promoted:
             token = token[0] + "Q"
         self._board.move_piece(src, dst)
         if token != event.piece_token:
             self._board.replace_piece(dst, token)
         cooldown_ms = JUMP_COOLDOWN_MS if event.is_jump else MOVE_COOLDOWN_MS
         self._arbiter.start_cooldown(dst, cooldown_ms)
+
+        if event.is_halt:
+            return Halted(source=src, resting_at=dst, token=event.piece_token, is_jump=event.is_jump)
+        if promoted:
+            return Promoted(source=src, position=dst, from_token=event.piece_token, to_token=token,
+                             is_jump=event.is_jump)
+        if target != EMPTY:
+            return Captured(source=src, position=dst, captured_token=target, by_token=event.piece_token,
+                             is_jump=event.is_jump)
+        return Arrived(source=src, destination=dst, token=event.piece_token, is_jump=event.is_jump)

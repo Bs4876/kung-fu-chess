@@ -42,13 +42,17 @@ class Motion:
 
 class ArrivalEvent:
     def __init__(self, piece_token: str, src: Position, dst: Position, airborne_dsts: dict = None,
-                 expected_target: str = None, is_jump: bool = False):
+                 expected_target: str = None, is_jump: bool = False, is_halt: bool = False):
         self.piece_token = piece_token
         self.src = src
         self.dst = dst
         self.airborne_dsts = airborne_dsts or {}
         self.expected_target = expected_target
         self.is_jump = is_jump
+        # True when dst is a mid-flight same-color halt cell, not the motion's
+        # original requested destination - GameEngine needs this to report a
+        # PieceHalted outcome instead of a plain arrival.
+        self.is_halt = is_halt
 
 
 class CollisionEvent:

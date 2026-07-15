@@ -71,7 +71,7 @@ class RealTimeArbiter:
                 if earlier.piece_token[0] == later.piece_token[0]:
                     removed.add(later)
                     safe_cell = self._safe_stop_before(later, meet_time)
-                    events.append(ArrivalEvent(later.piece_token, later.src, safe_cell))
+                    events.append(ArrivalEvent(later.piece_token, later.src, safe_cell, is_halt=True))
                 else:
                     removed.add(earlier)
                     events.append(CollisionEvent(earlier.piece_token, earlier.src))
