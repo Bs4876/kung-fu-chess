@@ -1,0 +1,10 @@
+Sound effects sourced from soundbible.com.
+
+move.mp3          "Click On" by SoundBible.com          - Attribution 3.0 (CC BY 3.0)
+capture.mp3       "Swords Clashing" by SoundBible.com   - Attribution 3.0 (CC BY 3.0)
+promotion.mp3     "Power-Up" by KP                       - Public Domain
+game_over.mp3     "Short Triumphal Fanfare" by John Stracke - Attribution 3.0 (CC BY 3.0)
+illegal_move.mp3  "Computer Error Alert" by SoundBible.com - Attribution 3.0 (CC BY 3.0)
+
+CC BY 3.0 requires attribution when redistributed - this file is that attribution.
+See https://creativecommons.org/licenses/by/3.0/ for the license text.
