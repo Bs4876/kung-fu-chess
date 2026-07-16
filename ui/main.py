@@ -80,6 +80,7 @@ def main() -> None:
     window.resize_to(hud.compose(initial_canvas, moves_log_panel, score_panel, player_labels))
 
     while window.poll():
+        window.maintain_aspect_ratio()
         dt_ms = clock.tick()
         # Age existing flashes/cooldowns by dt_ms *before* facade.tick() can
         # start new ones this frame - otherwise a cooldown that only just

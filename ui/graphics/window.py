@@ -11,16 +11,19 @@ from ui_config import WINDOW_ESC_KEY
 class Window:
     """Owns one OpenCV window and its per-frame lifecycle.
 
-    User-resizable by dragging its edges (cv2.WINDOW_NORMAL), with
-    WINDOW_KEEPRATIO so a drag never distorts the board into a non-square
-    aspect ratio. This needs no extra mouse-coordinate math: cv2's own Win32
-    backend already reports mouse callback (x, y) in the original image's
-    pixel space, scaled back from whatever on-screen size the user dragged
-    the window to.
+    User-resizable by dragging its edges (cv2.WINDOW_NORMAL). WINDOW_KEEPRATIO
+    keeps the rendered image itself undistorted inside whatever frame size the
+    user drags to; maintain_aspect_ratio (called once per frame) keeps the
+    frame itself from drifting off-ratio in the first place. Neither needs
+    extra mouse-coordinate math: cv2's own Win32 backend already reports mouse
+    callback (x, y) in the original image's pixel space, scaled back from
+    whatever on-screen size the window ends up at.
     """
 
     def __init__(self, title: str):
         self._title = title
+        self._aspect_ratio: float | None = None
+        self._last_size: tuple[int, int] | None = None
         cv2.namedWindow(title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
 
     def show_frame(self, canvas) -> None:
@@ -44,6 +47,29 @@ class Window:
         """
         height, width = canvas.img.shape[:2]
         cv2.resizeWindow(self._title, width, height)
+        self._aspect_ratio = width / height
+        self._last_size = (width, height)
+
+    def maintain_aspect_ratio(self) -> None:
+        """Keep the OS window's own frame locked to the startup aspect ratio.
+
+        WINDOW_KEEPRATIO only preserves the *rendered image's* proportions
+        inside whatever frame the user drags to (letterboxing it if the frame
+        itself goes off-ratio) - it does not stop the frame from being
+        dragged into a non-matching shape. Called once per frame: if the
+        user's drag left the window a different size since we last checked,
+        rescale height to match the new width at the original ratio.
+        """
+        if self._aspect_ratio is None:
+            return
+        _, _, width, height = cv2.getWindowImageRect(self._title)
+        if width <= 0 or height <= 0 or (width, height) == self._last_size:
+            return
+        target_height = round(width / self._aspect_ratio)
+        if target_height != height:
+            cv2.resizeWindow(self._title, width, target_height)
+            height = target_height
+        self._last_size = (width, height)
 
     def poll(self) -> bool:
         """Pump this frame's window events. Returns False once the window should close
