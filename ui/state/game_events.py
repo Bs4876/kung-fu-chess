@@ -14,6 +14,7 @@ class MoveAccepted:
     destination: Position
     token: str
     timestamp_ms: int = 0
+    duration_ms: int = 0
 
 
 @dataclass

@@ -94,6 +94,7 @@ def main() -> None:
         # it past COOLDOWN_MS before it's ever drawn even once.
         halt_flash.tick(dt_ms)
         cooldown_tracker.tick(dt_ms)
+        sound_player.tick(dt_ms)
         snapshot = facade.tick(dt_ms)
 
         # Controller doesn't expose selection via a public API; peeking at its

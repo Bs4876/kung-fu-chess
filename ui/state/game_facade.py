@@ -87,7 +87,7 @@ class GameFacade:
             token = snapshot.get_piece(source)
             duration_ms = _chebyshev_distance(source, destination) * MOVE_TRAVEL_TIME_PER_CELL
             self._motions.start(source, destination, token, duration_ms, is_jump=False)
-            self._moves_events.publish(MoveAccepted(source, destination, token, self._elapsed_ms))
+            self._moves_events.publish(MoveAccepted(source, destination, token, self._elapsed_ms, duration_ms))
         else:
             self._moves_events.publish(MoveRejected(source, destination, result.reason))
         return result
