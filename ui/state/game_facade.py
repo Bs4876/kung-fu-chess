@@ -12,7 +12,11 @@ the engine instead of pulling wait()'s return value, and forwards each one
 (reconciled against pending-motion bookkeeping in state/motion_tracker.py, then
 translated via state/outcome_translator.py into the state/game_events.py types
 log/score panels subscribe to) on its own event stream. GameFacade itself just
-coordinates: the engine, the tracker, and the event stream.
+coordinates: the engine, the tracker, and the event streams.
+
+Outward events are split into three channels (moves/outcomes/game_over) rather
+than one combined stream, so each UI component subscribes only to what it
+actually reacts to instead of every component filtering every event type.
 """
 
 from config import JUMP_TRAVEL_TIME, MOVE_TRAVEL_TIME_PER_CELL
@@ -39,7 +43,9 @@ class GameFacade:
     def __init__(self, engine):
         self._engine = engine
         self._motions = MotionTracker()
-        self._events = Subject()
+        self._moves_events = Subject()
+        self._outcomes_events = Subject()
+        self._game_over_events = Subject()
         self._elapsed_ms: int = 0
         self._engine.subscribe(self._on_engine_outcome)
 
@@ -48,16 +54,24 @@ class GameFacade:
         not just once wait() returns); reconcile bookkeeping and forward the
         translated event right away."""
         self._motions.reconcile(outcome)
-        self._events.publish(translate(outcome))
+        self._outcomes_events.publish(translate(outcome))
 
     @property
     def game_over(self) -> bool:
         return self._engine.game_over
 
-    def subscribe(self, callback) -> None:
-        """Register callback(event) to be notified of MoveAccepted, MoveRejected,
-        PieceArrived, PieceCaptured, PieceHalted, Promotion, and GameOver events."""
-        self._events.subscribe(callback)
+    def subscribe_moves(self, callback) -> None:
+        """Register callback(event) to be notified of MoveAccepted/MoveRejected."""
+        self._moves_events.subscribe(callback)
+
+    def subscribe_outcomes(self, callback) -> None:
+        """Register callback(event) to be notified of PieceArrived, PieceCaptured,
+        PieceHalted, and Promotion - the outcomes the engine resolves mid-wait."""
+        self._outcomes_events.subscribe(callback)
+
+    def subscribe_game_over(self, callback) -> None:
+        """Register callback(event) to be notified of GameOver."""
+        self._game_over_events.subscribe(callback)
 
     def snapshot(self):
         return self._engine.snapshot()
@@ -73,9 +87,9 @@ class GameFacade:
             token = snapshot.get_piece(source)
             duration_ms = _chebyshev_distance(source, destination) * MOVE_TRAVEL_TIME_PER_CELL
             self._motions.start(source, destination, token, duration_ms, is_jump=False)
-            self._events.publish(MoveAccepted(source, destination, token, self._elapsed_ms))
+            self._moves_events.publish(MoveAccepted(source, destination, token, self._elapsed_ms))
         else:
-            self._events.publish(MoveRejected(source, destination, result.reason))
+            self._moves_events.publish(MoveRejected(source, destination, result.reason))
         return result
 
     def request_jump(self, source, destination) -> None:
@@ -101,5 +115,5 @@ class GameFacade:
         self._motions.advance_all(dt_ms)
 
         if curr_snapshot.game_over and not game_over_before:
-            self._events.publish(GameOver())
+            self._game_over_events.publish(GameOver())
         return curr_snapshot

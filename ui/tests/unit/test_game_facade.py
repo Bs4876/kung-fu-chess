@@ -19,7 +19,9 @@ def facade_for(board_text: str) -> GameFacade:
 
 def events_from(facade: GameFacade) -> list:
     received = []
-    facade.subscribe(received.append)
+    facade.subscribe_moves(received.append)
+    facade.subscribe_outcomes(received.append)
+    facade.subscribe_game_over(received.append)
     return received
 
 
