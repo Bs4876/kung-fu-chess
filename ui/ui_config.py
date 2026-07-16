@@ -38,3 +38,11 @@ MOVES_LOG_MAX_VISIBLE_LINES = 20
 
 # graphics/window.py
 WINDOW_ESC_KEY = 27
+
+# ui_components/sound_player.py
+SOUNDS_DIR = ASSETS_DIR / "sounds"
+SOUND_MOVE = SOUNDS_DIR / "move.wav"
+SOUND_CAPTURE = SOUNDS_DIR / "capture.wav"
+SOUND_PROMOTION = SOUNDS_DIR / "promotion.wav"
+SOUND_GAME_OVER = SOUNDS_DIR / "game_over.wav"
+SOUND_ILLEGAL_MOVE = SOUNDS_DIR / "illegal_move.wav"

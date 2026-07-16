@@ -19,6 +19,7 @@ from ui_components.halt_flash import HaltFlashTracker
 from ui_components.moves_log_panel import MovesLogPanel
 from ui_components.player_labels import PlayerLabels
 from ui_components.score_panel import ScorePanel
+from ui_components.sound_player import SoundPlayer
 from user_input.mouse_controller import MouseController
 
 
@@ -68,6 +69,10 @@ def main() -> None:
     facade.subscribe_outcomes(halt_flash.handle_event)
     cooldown_tracker = CooldownTracker()
     facade.subscribe_outcomes(cooldown_tracker.handle_event)
+    sound_player = SoundPlayer()
+    facade.subscribe_moves(sound_player.handle_event)
+    facade.subscribe_outcomes(sound_player.handle_event)
+    facade.subscribe_game_over(sound_player.handle_event)
     player_labels = PlayerLabels()
 
     renderer, hud = build_render_stack()
