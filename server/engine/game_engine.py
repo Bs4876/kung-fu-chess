@@ -6,6 +6,7 @@ from rules.rule_engine import RuleEngine
 from realtime.real_time_arbiter import RealTimeArbiter
 from realtime.motion import CollisionEvent
 from config import MOVE_COOLDOWN_MS, JUMP_COOLDOWN_MS
+from engine.observer import Subject
 
 
 class MoveResult:
@@ -82,11 +83,18 @@ class GameEngine:
         self._rule_engine = RuleEngine()
         self._arbiter = RealTimeArbiter()
         self._game_over = False
+        self._events = Subject()
 
     @property
     def game_over(self) -> bool:
         """Whether a king has been captured and the game has ended."""
         return self._game_over
+
+    def subscribe(self, callback) -> None:
+        """Register callback(outcome) to be notified of each Arrived/Captured/
+        Halted/Promoted the instant wait() resolves it - the engine is the one
+        that identifies the outcome, so it's also the one that publishes it."""
+        self._events.subscribe(callback)
 
     def request_jump(self, source: Position, destination: Position) -> None:
         """Start a jump from source to destination, bypassing normal move legality.
@@ -125,6 +133,9 @@ class GameEngine:
         """Advance real-time motion by ms, apply any collisions/arrivals that
         occur, and return the domain events (Arrived/Captured/Halted/Promoted)
         each one actually resolved to - in the same order they were resolved.
+        Each one is also published to subscribe()'d callbacks as soon as it's
+        resolved, not just returned; the list return is kept for callers (and
+        tests) that want the whole batch at once.
 
         This is the single point where "what happened" is known for certain
         (capture vs. halt vs. stale-target cancellation, etc.); returning it
@@ -140,6 +151,7 @@ class GameEngine:
                 outcome = self._apply_arrival(event)
             if outcome is not None:
                 outcomes.append(outcome)
+                self._events.publish(outcome)
         return outcomes
 
     def _apply_collision(self, event: CollisionEvent):

@@ -552,3 +552,52 @@ def test_wait_reports_no_outcome_when_blocked_by_a_friendly_at_destination():
     outcomes = engine.wait(2000)
     assert outcomes == []
 
+
+# ── subscribe()/publish() ─────────────────────────────────────────────────────
+#
+# The engine is the one that identifies each outcome, so it's also the one
+# that publishes it - callers can subscribe instead of only reading wait()'s
+# return value.
+
+def test_subscriber_is_notified_of_a_resolved_outcome():
+    b = board_from(["wR . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    received = []
+    engine.subscribe(received.append)
+    engine.request_move(Position(0, 0), Position(0, 2))
+    outcomes = engine.wait(2000)
+    assert received == outcomes == [Arrived(Position(0, 0), Position(0, 2), "wR")]
+
+
+def test_subscriber_receives_nothing_when_wait_resolves_no_outcome():
+    b = board_from(["wR . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    received = []
+    engine.subscribe(received.append)
+    engine.request_move(Position(0, 0), Position(0, 2))
+    engine.wait(1999)  # not arrived yet
+    assert received == []
+
+
+def test_multiple_outcomes_in_one_wait_are_published_in_resolution_order():
+    b = board_from(["wR . .", ". . .", "bB . ."])
+    engine = GameEngine(b)
+    received = []
+    engine.subscribe(received.append)
+    engine.request_move(Position(0, 0), Position(0, 1))  # 1 cell -> 1000ms
+    engine.request_move(Position(2, 0), Position(0, 2))  # 2 diagonal cells -> 2000ms
+    outcomes = engine.wait(2000)
+    assert received == outcomes
+    assert len(received) == 2
+
+
+def test_multiple_subscribers_all_notified_of_the_same_outcome():
+    b = board_from(["wR . .", ". . .", ". . ."])
+    engine = GameEngine(b)
+    first, second = [], []
+    engine.subscribe(first.append)
+    engine.subscribe(second.append)
+    engine.request_move(Position(0, 0), Position(0, 2))
+    engine.wait(2000)
+    assert first == second == [Arrived(Position(0, 0), Position(0, 2), "wR")]
+
