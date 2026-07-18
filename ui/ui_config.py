@@ -25,16 +25,29 @@ HUD_DIVIDER_COLOR     = (160, 180, 200, 255)  # BGRA muted line
 HUD_TITLE_FONT_SIZE   = 0.75
 HUD_SCORE_FONT_SIZE   = 0.60
 HUD_LINE_FONT_SIZE    = 0.48
+HUD_TITLE_THICKNESS   = 2
 HUD_LINE_HEIGHT_PX    = 24
 HUD_LEFT_PADDING_PX   = 14
 HUD_TOP_PADDING_PX    = 28
+HUD_TITLE_TO_SCORE_GAP_PX = 4   # extra gap under the name, on top of one line height
+HUD_SCORE_TO_DIVIDER_GAP_PX = 10
 HUD_SCORE_TO_MOVES_GAP_PX = 36
+
+# graphics/overlay_renderer.py's game-over banner.
+GAME_OVER_BANNER_FONT_SIZE = 1.6
+GAME_OVER_BANNER_COLOR     = (0, 0, 255, 255)  # BGRA red
+GAME_OVER_BANNER_THICKNESS = 3
+
+# graphics/sprite_loader.py's cooldown-fade overlay.
+COOLDOWN_FADE_COLOR = (150, 255, 255)  # BGR pale yellow
+COOLDOWN_FADE_ALPHA = 160
 
 # ui_components/halt_flash.py
 HALT_FLASH_DURATION_MS = 600
 
 # ui_components/moves_log_panel.py
 MOVES_LOG_MAX_VISIBLE_LINES = 20
+BOARD_ROWS = 8  # for converting a row index to algebraic rank notation (row 7 = rank 1)
 
 # graphics/window.py
 WINDOW_ESC_KEY = 27

@@ -33,18 +33,18 @@ class MouseController:
             self._handle_jump(x, y)
 
     def _handle_left_click(self, x, y) -> None:
-        selected = self._controller._selected
+        selected = self._controller.selected
         if selected is not None and self._mapper.pixel_to_cell(x, y) == selected:
             self._facade.request_jump(selected, selected)
-            self._controller._selected = None
+            self._controller.deselect()
             return
         self._controller.click(x, y)
 
     def _handle_jump(self, x, y) -> None:
-        source = self._controller._selected
+        source = self._controller.selected
         if source is None:
             return
         destination = self._mapper.pixel_to_cell(x, y)
         if destination is not None:
             self._facade.request_jump(source, destination)
-        self._controller._selected = None
+        self._controller.deselect()

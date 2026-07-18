@@ -8,6 +8,19 @@ class Controller:
         self._mapper = board_mapper
         self._selected = None
 
+    @property
+    def selected(self):
+        """The currently selected cell, or None - read-only: callers outside
+        click()'s own select/move/deselect flow should use deselect(), not
+        assign this directly."""
+        return self._selected
+
+    def deselect(self) -> None:
+        """Clear the current selection without issuing a move - for input
+        paths outside click()'s own select-then-move flow (e.g. a caller
+        implementing jump-in-place or a right-click jump)."""
+        self._selected = None
+
     def click(self, x: int, y: int) -> None:
         pos = self._mapper.pixel_to_cell(x, y)
 

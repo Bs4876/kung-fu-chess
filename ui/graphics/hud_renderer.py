@@ -49,18 +49,18 @@ class HudRenderer:
 
         y = ui_config.HUD_TOP_PADDING_PX
         scene.put_text(name, x, y, ui_config.HUD_TITLE_FONT_SIZE,
-                       color=ui_config.HUD_TITLE_COLOR, thickness=2)
+                       color=ui_config.HUD_TITLE_COLOR, thickness=ui_config.HUD_TITLE_THICKNESS)
 
-        y += ui_config.HUD_LINE_HEIGHT_PX + 4
+        y += ui_config.HUD_LINE_HEIGHT_PX + ui_config.HUD_TITLE_TO_SCORE_GAP_PX
         scene.put_text(f"Score: {score}", x, y, ui_config.HUD_SCORE_FONT_SIZE,
                        color=ui_config.HUD_SCORE_COLOR)
 
         # divider line under score
-        y += 10
+        y += ui_config.HUD_SCORE_TO_DIVIDER_GAP_PX
         div_color = ui_config.HUD_DIVIDER_COLOR
         scene.img[y:y+1, x:panel_right] = div_color
 
-        y += ui_config.HUD_SCORE_TO_MOVES_GAP_PX - 10
+        y += ui_config.HUD_SCORE_TO_MOVES_GAP_PX - ui_config.HUD_SCORE_TO_DIVIDER_GAP_PX
         for line in lines:
             y += ui_config.HUD_LINE_HEIGHT_PX
             if y >= board_height - ui_config.HUD_LINE_HEIGHT_PX:

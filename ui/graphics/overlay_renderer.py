@@ -7,6 +7,7 @@ place onto a shared canvas, and a halted+cooling cell legitimately gets both
 overlays stacked in this order.
 """
 
+import ui_config
 from model.position import Position
 
 
@@ -40,4 +41,5 @@ class OverlayRenderer:
 
     def _draw_game_over_banner(self, canvas) -> None:
         board_height = canvas.img.shape[0]
-        canvas.put_text("GAME OVER", self._cell_size, board_height // 2, 1.6, color=(0, 0, 255, 255), thickness=3)
+        canvas.put_text("GAME OVER", self._cell_size, board_height // 2, ui_config.GAME_OVER_BANNER_FONT_SIZE,
+                        color=ui_config.GAME_OVER_BANNER_COLOR, thickness=ui_config.GAME_OVER_BANNER_THICKNESS)

@@ -2,6 +2,7 @@
 
 import json
 
+import ui_config
 from vendor.img import Img
 
 
@@ -34,27 +35,41 @@ class SpriteLoader:
         self._cell_size = cell_size
         self._frame_cache: dict[tuple[str, str, int], Img] = {}
         self._config_cache: dict[tuple[str, str], StateConfig] = {}
+        self._static_image_cache: dict = {}
+
+    def _load_static(self, key, path, size) -> Img:
+        """Read+resize path once per (key, size) and cache the decoded pixels;
+        every call still gets its own Img wrapping a copy of that array, so a
+        caller's draw_on (which mutates in place) can never corrupt the cache
+        or bleed into another caller's canvas - only the disk read+decode+
+        resize is shared, not the pixels themselves."""
+        cache_key = (key, size)
+        if cache_key not in self._static_image_cache:
+            self._static_image_cache[cache_key] = Img().read(path, size=size).img
+        img = Img()
+        img.img = self._static_image_cache[cache_key].copy()
+        return img
 
     def load_board(self, rows: int, cols: int) -> Img:
         """Load board.png resized to exactly fit an (rows x cols) board of cells."""
         path = self._assets_dir / "board.png"
         size = (cols * self._cell_size, rows * self._cell_size)
-        return Img().read(path, size=size)
+        return self._load_static("board", path, size)
 
     def load_selection_highlight(self) -> Img:
         """Load the pre-baked transparent border overlay used to mark the selected cell."""
         path = self._assets_dir / "selection_highlight.png"
-        return Img().read(path, size=(self._cell_size, self._cell_size))
+        return self._load_static("selection_highlight", path, (self._cell_size, self._cell_size))
 
     def load_halt_flash(self) -> Img:
         """Load the translucent red overlay marking a just-halted cell."""
         path = self._assets_dir / "halt_flash.png"
-        return Img().read(path, size=(self._cell_size, self._cell_size))
+        return self._load_static("halt_flash", path, (self._cell_size, self._cell_size))
 
     def load_panel_background(self, width: int, height: int) -> Img:
         """Load the solid-color HUD background, resized to any (width, height)."""
         path = self._assets_dir / "panel_background.png"
-        return Img().read(path, size=(width, height))
+        return self._load_static("panel_background", path, (width, height))
 
     def load_cooldown_fade_frame(self, fraction: float) -> Img:
         """Generate a light-yellow bar that drains top-down as fraction goes 0->1:
@@ -69,8 +84,8 @@ class SpriteLoader:
         exact_filled = size * (1.0 - fraction)
         filled_rows = int(exact_filled)
         partial = exact_filled - filled_rows
-        color = (150, 255, 255)  # BGR - light/pale yellow
-        alpha = 160
+        color = ui_config.COOLDOWN_FADE_COLOR
+        alpha = ui_config.COOLDOWN_FADE_ALPHA
 
         overlay = np.zeros((size, size, 4), dtype=np.uint8)
         if filled_rows > 0:

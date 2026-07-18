@@ -8,7 +8,7 @@ from user_input.mouse_controller import MouseController
 
 def build(selected=None):
     controller = MagicMock()
-    controller._selected = selected
+    controller.selected = selected
     facade = MagicMock()
     mapper = MagicMock()
     return MouseController(controller, facade, mapper), controller, facade, mapper
@@ -38,7 +38,7 @@ def test_right_click_clears_the_selection_afterward():
     mc, controller, facade, mapper = build(selected=Position(0, 0))
     mapper.pixel_to_cell.return_value = Position(0, 2)
     mc.handle_event(cv2.EVENT_RBUTTONDOWN, 250, 50, 0, None)
-    assert controller._selected is None
+    controller.deselect.assert_called_once()
 
 
 def test_right_click_outside_the_board_does_not_request_a_jump():
@@ -60,7 +60,7 @@ def test_left_clicking_the_same_square_again_clears_the_selection_afterward():
     mc, controller, facade, mapper = build(selected=Position(0, 0))
     mapper.pixel_to_cell.return_value = Position(0, 0)
     mc.handle_event(cv2.EVENT_LBUTTONDOWN, 50, 50, 0, None)
-    assert controller._selected is None
+    controller.deselect.assert_called_once()
 
 
 def test_left_clicking_a_different_square_while_selected_still_goes_through_controller():
@@ -73,7 +73,7 @@ def test_left_clicking_a_different_square_while_selected_still_goes_through_cont
 
 def test_board_x_offset_is_subtracted_before_forwarding_a_left_click():
     controller = MagicMock()
-    controller._selected = None
+    controller.selected = None
     facade = MagicMock()
     mapper = MagicMock()
     mc = MouseController(controller, facade, mapper, board_x_offset=220)
@@ -83,7 +83,7 @@ def test_board_x_offset_is_subtracted_before_forwarding_a_left_click():
 
 def test_board_x_offset_is_subtracted_before_mapping_a_right_click():
     controller = MagicMock()
-    controller._selected = Position(0, 0)
+    controller.selected = Position(0, 0)
     facade = MagicMock()
     mapper = MagicMock()
     mapper.pixel_to_cell.return_value = Position(0, 2)

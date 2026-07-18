@@ -4,7 +4,7 @@ Deliberately does no snapshot-diffing of its own - see state/game_facade.py for
 why that bookkeeping is centralized there instead of duplicated in every panel.
 """
 
-from ui_config import MOVES_LOG_MAX_VISIBLE_LINES
+from ui_config import BOARD_ROWS, MOVES_LOG_MAX_VISIBLE_LINES
 
 from state.game_events import MoveAccepted
 
@@ -12,7 +12,7 @@ from state.game_events import MoveAccepted
 def _cell_name(position) -> str:
     """Standard algebraic-style cell name (row 7 = rank 1, matching how the
     starting position places White's back rank at the bottom, row 0)."""
-    return f"{chr(ord('a') + position.col)}{8 - position.row}"
+    return f"{chr(ord('a') + position.col)}{BOARD_ROWS - position.row}"
 
 
 def _format_time(ms: int) -> str:

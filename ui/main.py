@@ -97,12 +97,10 @@ def main() -> None:
         sound_player.tick(dt_ms)
         snapshot = facade.tick(dt_ms)
 
-        # Controller doesn't expose selection via a public API; peeking at its
-        # internal state is a pragmatic tradeoff to avoid duplicating it here.
         board_canvas = renderer.render(
             snapshot,
             dt_ms,
-            selected=controller._selected,
+            selected=controller.selected,
             pending_motions=facade.pending_motions(),
             halted_positions=halt_flash.active_positions(),
             game_over=game_over_banner.is_game_over,

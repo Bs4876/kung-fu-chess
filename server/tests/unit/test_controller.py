@@ -80,3 +80,19 @@ def test_second_click_clears_selection_even_on_invalid_move():
     engine.request_move.reset_mock()
     ctrl.click(150, 50)
     engine.request_move.assert_not_called()
+
+
+def test_selected_reflects_the_current_selection():
+    ctrl, engine, _ = setup()
+    assert ctrl.selected is None
+    ctrl.click(50, 50)
+    assert ctrl.selected == Position(0, 0)
+
+
+def test_deselect_clears_the_selection():
+    ctrl, engine, _ = setup()
+    ctrl.click(50, 50)
+    ctrl.deselect()
+    assert ctrl.selected is None
+    ctrl.click(250, 50)  # would move if still selected from (0, 0)
+    engine.request_move.assert_not_called()
