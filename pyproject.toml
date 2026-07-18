@@ -8,6 +8,15 @@ dependencies = [
     "pytest-cov>=7.1.0",
 ]
 
+[tool.pytest.ini_options]
+# server/ and ui/ each have their own main.py (and other same-named modules) -
+# the default "prepend" import mode makes pytest juggle sys.path per test file
+# as it collects them, which silently lets one shadow the other depending on
+# collection order (e.g. server/tests/unit/test_main.py, which does a bare
+# `import main` expecting server/main.py). importlib mode gives every test
+# module a proper qualified name instead, sidestepping the collision entirely.
+addopts = "--import-mode=importlib"
+
 [tool.pyright]
 # ui/ scripts add server/ to sys.path at runtime (see ui/server_bridge.py); tell
 # the language server about it too, so its bare imports (`from model.board import

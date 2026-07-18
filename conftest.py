@@ -10,7 +10,21 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent
 
-for _subdir in ("server", "ui"):
-    _path = str(_ROOT / _subdir)
-    if _path not in sys.path:
-        sys.path.insert(0, _path)
+
+def _promote(path: str) -> None:
+    """Force path to sys.path[0], regardless of whether it's already present
+    somewhere else - pytest's own rootdir/conftest-loading machinery can
+    already have put server/ (or ui/) on sys.path at some other position
+    before this module's top-level code even runs, which would silently
+    defeat a naive "insert(0, path) only if not already present"."""
+    while path in sys.path:
+        sys.path.remove(path)
+    sys.path.insert(0, path)
+
+
+# ui/ is promoted first so server/ ends up ahead of it - server must win any
+# bare module name both sides happen to share (e.g. both have their own
+# main.py: server/tests/unit/test_main.py does `import main` expecting
+# server/main.py). Nothing on the ui/ side relies on the reverse.
+_promote(str(_ROOT / "ui"))
+_promote(str(_ROOT / "server"))
