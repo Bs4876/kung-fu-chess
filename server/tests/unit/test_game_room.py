@@ -27,6 +27,14 @@ async def _flush():
     await asyncio.sleep(0)
 
 
+class FakeUser:
+    """Stands in for persistence.users_repository.User - just enough
+    (.username) for GameRoom.color_of_player's username-based lookup."""
+
+    def __init__(self, username: str):
+        self.username = username
+
+
 async def test_join_assigns_white_then_black_then_rejects_a_third():
     room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus())
     assert room.join(FakeSocket()) == "white"
@@ -164,3 +172,130 @@ async def test_game_ended_is_published_onto_the_bus_with_both_players_and_the_wi
 
     game_ended = [e for e in received if isinstance(e, GameEnded)]
     assert game_ended == [GameEnded(game_id="1", white_player=alice, black_player=bob, winner="white")]
+
+
+async def test_color_of_player_finds_a_seated_players_color():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus())
+    alice, bob = FakeUser("alice"), FakeUser("bob")
+    room.join(FakeSocket(), player=alice)
+    room.join(FakeSocket(), player=bob)
+    assert room.color_of_player(alice) == "white"
+    assert room.color_of_player(bob) == "black"
+
+
+async def test_color_of_player_matches_by_username_not_object_identity():
+    """A reconnecting session's User comes from a fresh DB query (a
+    different Python object) - color_of_player must still recognize it as
+    the same player it originally seated."""
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus())
+    room.join(FakeSocket(), player=FakeUser("alice"))
+    assert room.color_of_player(FakeUser("alice")) == "white"
+
+
+def test_color_of_player_returns_none_for_an_unseated_player():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus())
+    assert room.color_of_player(FakeUser("nobody")) is None
+
+
+def test_color_of_player_returns_none_for_none():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus())
+    assert room.color_of_player(None) is None
+
+
+class _SpyBot:
+    def __init__(self):
+        self.turns = 0
+
+    def take_turn(self) -> None:
+        self.turns += 1
+
+
+async def test_attached_bots_take_a_turn_every_tick():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus(), tick_ms=10)
+    bot = _SpyBot()
+    room.attach_bot("black", bot)
+    room.start()
+    try:
+        await asyncio.sleep(0.05)
+    finally:
+        room.stop()
+    assert bot.turns >= 2
+
+
+async def test_leave_mid_game_broadcasts_opponent_disconnected_to_the_remaining_player():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus(), disconnect_grace_ms=100)
+    remaining, leaving = FakeSocket(), FakeSocket()
+    room.join(remaining)
+    room.join(leaving)
+
+    room.leave(leaving)
+    await _flush()
+
+    assert remaining.sent[-1]["type"] == protocol.OPPONENT_DISCONNECTED
+    assert remaining.sent[-1]["forfeit_in_ms"] == 100
+    room.stop()
+
+
+async def test_disconnect_forfeits_to_the_remaining_player_once_the_grace_window_elapses():
+    bus = EventBus()
+    received = []
+    bus.subscribe("game.1", received.append)
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), bus, disconnect_grace_ms=20)
+    remaining, leaving = FakeSocket(), FakeSocket()
+    room.join(remaining, player=object())
+    room.join(leaving, player=object())
+
+    room.leave(leaving)
+    await asyncio.sleep(0.06)
+
+    game_over_messages = [m for m in remaining.sent if m["type"] == protocol.GAME_OVER]
+    assert len(game_over_messages) == 1
+    assert game_over_messages[0]["reason"] == "opponent_disconnected"
+    assert game_over_messages[0]["winner"] == "white"  # "remaining" was seated first -> white
+    assert any(isinstance(e, GameEnded) and e.winner == "white" for e in received)
+
+
+async def test_rejoining_within_the_grace_window_cancels_the_forfeit():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus(), disconnect_grace_ms=50)
+    remaining, leaving = FakeSocket(), FakeSocket()
+    room.join(remaining)
+    room.join(leaving)
+
+    room.leave(leaving)
+    reconnected = FakeSocket()
+    room.rejoin(reconnected, "black")
+    await asyncio.sleep(0.08)  # well past the original grace window
+
+    assert room.color_of(reconnected) == "black"
+    assert not any(m["type"] == protocol.GAME_OVER for m in remaining.sent)
+    room.stop()
+
+
+async def test_leave_after_the_game_already_ended_does_not_start_a_forfeit_timer():
+    room = GameRoom("1", board_from(["wR . bK", ". . .", ". . ."]), EventBus(), disconnect_grace_ms=20)
+    winner_socket, loser_socket = FakeSocket(), FakeSocket()
+    room.join(winner_socket)
+    room.join(loser_socket)
+    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room._engine.wait(2000)  # king capture - game already over
+    await _flush()
+
+    room.leave(winner_socket)
+    await _flush()
+
+    assert not any(m["type"] == protocol.OPPONENT_DISCONNECTED for m in loser_socket.sent)
+
+
+async def test_moves_are_ignored_once_the_game_has_ended_by_forfeit():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus(), disconnect_grace_ms=10)
+    remaining, leaving = FakeSocket(), FakeSocket()
+    room.join(remaining)
+    room.join(leaving)
+    room.leave(leaving)
+    await asyncio.sleep(0.05)  # forfeited by now
+
+    remaining.sent.clear()
+    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    await _flush()
+
+    assert remaining.sent == []

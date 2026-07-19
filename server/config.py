@@ -17,3 +17,8 @@ TICK_MS = 100  # how often each GameRoom advances its GameEngine's real-time clo
 DB_PATH = Path(__file__).resolve().parent / "data" / "kungfuchess.db"
 DEFAULT_ELO = 1200  # a commonly-recognized "average new player" anchor, not slide-mandated
 ELO_K_FACTOR = 32  # standard default for lower-rated/provisional players, not slide-mandated
+
+MATCH_ELO_RANGE = 100  # per the slide's "+-100"
+MATCHMAKING_TICK_MS = 500  # how often the waiting queue is rescanned for pairs/timeouts
+MATCHMAKING_WAIT_MS = 10_000  # how long to wait for a human match before falling back to a bot
+DISCONNECT_GRACE_MS = 20_000  # how long a disconnected player's seat is held before forfeit

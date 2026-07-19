@@ -7,7 +7,8 @@ from config import WS_HOST, WS_PORT
 from engine.game_engine import GameEngine
 from graphics.window import Window
 from model.starting_position import STARTING_POSITION
-from network.network_game_facade import connect
+from net import protocol
+from network.network_game_facade import NetworkGameFacade
 from network.ws_client import WsClient
 from screens.game_screen import GameScreen
 from screens.home_screen import HomeScreen
@@ -27,49 +28,32 @@ def build_local_game_screen() -> GameScreen:
     return GameScreen(GameFacade(GameEngine(board)))
 
 
-def build_network_game_screen() -> GameScreen:
-    """Connect to the local server and build a GameScreen wired to a
-    NetworkGameFacade.
-
-    connect() blocks the calling thread until paired with an opponent (see
-    net/anonymous_lobby.py) - the home screen has no "searching for an
-    opponent..." state yet, so clicking Play just waits right here. A later
-    stage replaces the anonymous lobby with real matchmaking and adds that
-    waiting state; this is deliberately as simple as it can be for now.
-    """
-    return GameScreen(connect(_SERVER_URI))
-
-
-def build_login_screen(on_success) -> LoginScreen:
-    """Open a fresh connection and show the login/register screen on it.
-
-    Login doesn't gate Play yet - see home_screen.py's docstring - so this
-    connection is separate from whatever one build_network_game_screen()
-    opens later; logging in here is a standalone, working path, not yet a
-    prerequisite for anything.
-    """
-    client = WsClient(_SERVER_URI)
-    return LoginScreen(client, on_success)
-
-
 def main() -> None:
     window = Window(ui_config.WINDOW_TITLE)
     screen_manager = ScreenManager(window)
     clock = Clock()
 
-    def on_play() -> None:
-        screen_manager.show(build_network_game_screen())
+    def build_home_screen(client, username: str, elo: int) -> HomeScreen:
+        def on_play() -> None:
+            # play requires having already logged in on this same connection
+            # (see net/ws_server.py) - matchmaking then blocks this thread
+            # until it finds a human within range or, failing that, a bot
+            # (see net/matchmaking.py); there's no "searching..." UI state
+            # yet, so this just waits.
+            client.send(protocol.play())
+            screen_manager.show(GameScreen(NetworkGameFacade(client)))
 
-    def on_login() -> None:
+        return HomeScreen(username, elo, on_play)
+
+    def build_login_screen() -> LoginScreen:
+        client = WsClient(_SERVER_URI)
+
         def on_success(username: str, elo: int) -> None:
-            screen_manager.show(build_home_screen())
+            screen_manager.show(build_home_screen(client, username, elo))
 
-        screen_manager.show(build_login_screen(on_success))
+        return LoginScreen(client, on_success)
 
-    def build_home_screen() -> HomeScreen:
-        return HomeScreen(on_play, on_login)
-
-    screen_manager.show(build_home_screen())
+    screen_manager.show(build_login_screen())
 
     while window.poll():
         window.maintain_aspect_ratio()

@@ -1,7 +1,8 @@
-"""One real end-to-end smoke test over an actual socket - proving the asyncio
-tick loop, protocol encoding, and GameRoom wiring all work together. Most
-protocol/room behavior is covered without a socket in tests/unit/; this file
-stays deliberately small.
+"""Real end-to-end smoke tests over actual sockets - proving the asyncio
+tick loop, protocol encoding, matchmaking, and GameRoom wiring all work
+together. Most protocol/room/matchmaking behavior is covered without a
+socket in tests/unit/ (with fast injectable timing); this file stays
+deliberately small and uses the real (short-ish) config defaults.
 """
 
 import asyncio
@@ -9,6 +10,7 @@ import asyncio
 import pytest
 import websockets
 
+from model.position import Position
 from net import protocol
 from net.ws_server import serve
 
@@ -22,53 +24,50 @@ async def running_server(tmp_path):
     await server.wait_closed()
 
 
-async def test_two_clients_join_and_play_a_full_move_over_a_real_socket(running_server):
+async def _register_and_login(ws, username: str) -> None:
+    await ws.send(protocol.encode(protocol.register(username, "hunter2")))
+    response = protocol.decode(await ws.recv())
+    assert response["success"] is True
+
+
+async def _play_and_match(white_ws, black_ws) -> tuple[dict, dict]:
+    """Register+log in both sockets as alice/bob, send play on both, and
+    return their (white_start, black_start) game_start messages once matched."""
+    await _register_and_login(white_ws, "alice")
+    await _register_and_login(black_ws, "bob")
+    await white_ws.send(protocol.encode(protocol.play()))
+    await black_ws.send(protocol.encode(protocol.play()))
+    assert protocol.decode(await white_ws.recv())["type"] == protocol.MATCHMAKING_STATUS
+    assert protocol.decode(await black_ws.recv())["type"] == protocol.MATCHMAKING_STATUS
+    white_start = protocol.decode(await asyncio.wait_for(white_ws.recv(), timeout=3))
+    black_start = protocol.decode(await asyncio.wait_for(black_ws.recv(), timeout=3))
+    assert white_start["type"] == protocol.GAME_START
+    return white_start, black_start
+
+
+async def test_two_matched_players_play_a_full_move_over_real_sockets(running_server):
     uri = f"ws://localhost:{running_server}"
 
     async with websockets.connect(uri) as white_ws, websockets.connect(uri) as black_ws:
-        white_start = protocol.decode(await white_ws.recv())
-        black_start = protocol.decode(await black_ws.recv())
+        white_start, black_start = await _play_and_match(white_ws, black_ws)
         assert {white_start["color"], black_start["color"]} == {"white", "black"}
+        assert white_start["game_id"] == black_start["game_id"]
 
-        await white_ws.send(protocol.encode({
-            "type": protocol.REQUEST_MOVE,
-            "source": {"row": 6, "col": 0},
-            "destination": {"row": 5, "col": 0},
-        }))
+        await white_ws.send(protocol.encode(protocol.request_move(
+            white_start["game_id"], Position(6, 0), Position(5, 0),
+        )))
 
         accepted = protocol.decode(await white_ws.recv())
         assert accepted["type"] == protocol.MOVE_ACCEPTED
 
         arrived = protocol.decode(await asyncio.wait_for(white_ws.recv(), timeout=3))
         assert arrived["type"] == protocol.ARRIVED
-        assert arrived["state_version"] == 1
-
-
-async def test_a_third_and_fourth_connection_are_paired_into_a_separate_room(running_server):
-    uri = f"ws://localhost:{running_server}"
-
-    async with websockets.connect(uri) as first, websockets.connect(uri) as second, \
-            websockets.connect(uri) as third, websockets.connect(uri) as fourth:
-        first_room = protocol.decode(await first.recv())["game_id"]
-        second_room = protocol.decode(await second.recv())["game_id"]
-        third_room = protocol.decode(await third.recv())["game_id"]
-        fourth_room = protocol.decode(await fourth.recv())["game_id"]
-
-        assert first_room == second_room
-        assert third_room == fourth_room
-        assert first_room != third_room
 
 
 async def test_register_then_login_over_a_real_socket(running_server):
     uri = f"ws://localhost:{running_server}"
 
-    # AnonymousLobby.join() blocks a lone connection until a second one
-    # pairs with it (see net/anonymous_lobby.py) - _opponent exists purely
-    # to unblock that pairing so ws gets its game_start and the dispatch
-    # loop (where login/register are handled) actually starts.
-    async with websockets.connect(uri) as ws, websockets.connect(uri) as _opponent:
-        await ws.recv()  # game_start - not what this test cares about
-
+    async with websockets.connect(uri) as ws:
         await ws.send(protocol.encode(protocol.register("alice", "hunter2")))
         register_response = protocol.decode(await ws.recv())
         assert register_response["success"] is True
@@ -82,3 +81,51 @@ async def test_register_then_login_over_a_real_socket(running_server):
         ok_login = protocol.decode(await ws.recv())
         assert ok_login["success"] is True
         assert ok_login["elo"] == register_response["elo"]
+
+
+async def test_play_before_logging_in_is_rejected(running_server):
+    uri = f"ws://localhost:{running_server}"
+
+    async with websockets.connect(uri) as ws:
+        await ws.send(protocol.encode(protocol.play()))
+        response = protocol.decode(await ws.recv())
+        assert response["type"] == protocol.ERROR
+        assert response["code"] == "not_authenticated"
+
+
+async def test_disconnect_then_rejoin_resumes_the_same_game(running_server):
+    uri = f"ws://localhost:{running_server}"
+
+    white_ws = await websockets.connect(uri)
+    black_ws = await websockets.connect(uri)
+    try:
+        white_start, _black_start = await _play_and_match(white_ws, black_ws)
+        game_id = white_start["game_id"]
+
+        await white_ws.close()
+        disconnected_notice = protocol.decode(await black_ws.recv())
+        assert disconnected_notice["type"] == protocol.OPPONENT_DISCONNECTED
+
+        async with websockets.connect(uri) as reconnect_ws:
+            await reconnect_ws.send(protocol.encode(protocol.login("alice", "hunter2")))
+            login_response = protocol.decode(await reconnect_ws.recv())
+            assert login_response["success"] is True
+
+            await reconnect_ws.send(protocol.encode(protocol.rejoin_game(game_id)))
+            rejoined = protocol.decode(await reconnect_ws.recv())
+            assert rejoined["type"] == protocol.GAME_START
+            assert rejoined["game_id"] == game_id
+            assert rejoined["color"] == white_start["color"]
+    finally:
+        await black_ws.close()
+
+
+async def test_rejoining_an_unknown_game_id_is_rejected(running_server):
+    uri = f"ws://localhost:{running_server}"
+
+    async with websockets.connect(uri) as ws:
+        await _register_and_login(ws, "alice")
+        await ws.send(protocol.encode(protocol.rejoin_game("no-such-game")))
+        response = protocol.decode(await ws.recv())
+        assert response["type"] == protocol.ERROR
+        assert response["code"] == "cannot_rejoin"

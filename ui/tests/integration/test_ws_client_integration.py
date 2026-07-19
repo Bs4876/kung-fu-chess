@@ -1,8 +1,9 @@
 """One real end-to-end test of the ui-side networking stack against an
 actual running server - proving WsClient's background-thread bridge and
-NetworkGameFacade's message handling work together over a real socket
-(test_network_game_facade.py covers the rest of NetworkGameFacade's
-behavior against a fake transport, without needing a socket at all).
+NetworkGameFacade's message handling work together over a real socket,
+through the full login -> play -> matched flow (test_network_game_facade.py
+covers the rest of NetworkGameFacade's behavior against a fake transport,
+without needing a socket at all).
 """
 
 import asyncio
@@ -10,8 +11,10 @@ import asyncio
 import pytest
 
 from model.position import Position
+from net import protocol
 from net.ws_server import serve
-from network.network_game_facade import connect
+from network.network_game_facade import NetworkGameFacade
+from network.ws_client import WsClient
 
 
 @pytest.fixture
@@ -23,19 +26,31 @@ async def running_server(tmp_path):
     await server.wait_closed()
 
 
+def _register_login_and_play(uri: str, username: str) -> NetworkGameFacade:
+    """Blocking: connect, register+log in, send play, and wait for
+    game_start (skipping any matchmaking_status preamble) - everything
+    NetworkGameFacade needs before it can be constructed."""
+    client = WsClient(uri)
+    client.send(protocol.register(username, "hunter2"))
+    login_result = client.recv_one_blocking()
+    assert login_result["success"] is True
+    client.send(protocol.play())
+    return NetworkGameFacade(client)
+
+
 async def test_two_network_game_facades_play_a_full_move_over_a_real_socket(running_server):
     uri = f"ws://localhost:{running_server}"
 
-    # connect() blocks (waiting on the WS handshake, then on game_start,
-    # which itself doesn't arrive until the server's AnonymousLobby pairs
-    # this connection with a second one) - run both concurrently on worker
-    # threads, or the first call would block forever waiting for a second
-    # player who never gets the chance to connect.
+    # Both of these block (WS handshake, login round trip, then game_start) -
+    # run them concurrently on worker threads, or the first call would sit
+    # in matchmaking forever waiting for a second player who never gets the
+    # chance to connect.
     white, black = await asyncio.gather(
-        asyncio.to_thread(connect, uri),
-        asyncio.to_thread(connect, uri),
+        asyncio.to_thread(_register_login_and_play, uri, "alice"),
+        asyncio.to_thread(_register_login_and_play, uri, "bob"),
     )
     assert {white.color, black.color} == {"white", "black"}
+    assert white.game_id == black.game_id
 
     white.request_move(Position(6, 0), Position(5, 0))
     await asyncio.sleep(0.3)  # let the request/move_accepted round trip land

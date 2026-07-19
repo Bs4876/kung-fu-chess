@@ -33,17 +33,11 @@ from engine.game_engine import Arrived, Captured, GameSnapshot, Halted, Promoted
 from model.board import EMPTY, Board
 from model.position import Position
 from net import protocol
-from network.ws_client import WsClient
 from rules.rule_engine import RuleEngine
 from state.game_events import GameOver, MoveAccepted, MoveRejected
 from state.motion_tracker import MotionTracker
 from state.observer import Subject
 from state.outcome_translator import translate
-
-
-def connect(uri: str) -> "NetworkGameFacade":
-    """Connect to uri and block until the server's game_start arrives."""
-    return NetworkGameFacade(WsClient(uri))
 
 
 def _chebyshev_distance(a: Position, b: Position) -> int:
@@ -54,7 +48,13 @@ class NetworkGameFacade:
     def __init__(self, client):
         """client: anything shaped like WsClient (send(message)/recv_all()/
         recv_one_blocking()) - real WsClient in production, a fake in tests
-        (see ui/tests/unit/test_network_game_facade.py)."""
+        (see ui/tests/unit/test_network_game_facade.py).
+
+        client must already be logged in and have just sent a `play`
+        command (see net/protocol.py) - construction blocks until game_start
+        arrives, skipping over any preamble (e.g. matchmaking_status) sent
+        while waiting to be matched.
+        """
         self._client = client
         self._rule_engine = RuleEngine()
         self._motions = MotionTracker()
@@ -75,10 +75,18 @@ class NetworkGameFacade:
             protocol.ERROR: self._handle_error,
         }
 
-        start = self._client.recv_one_blocking()
+        start = self._recv_game_start()
         self.game_id: str = start["game_id"]
         self.color: str = start["color"]
         self._board = Board(start["snapshot"]["board"])
+
+    def _recv_game_start(self) -> dict:
+        """Block until a game_start arrives, discarding anything else that
+        shows up first (e.g. matchmaking_status while waiting to be matched)."""
+        while True:
+            message = self._client.recv_one_blocking()
+            if message["type"] == protocol.GAME_START:
+                return message
 
     @property
     def game_over(self) -> bool:
@@ -120,7 +128,9 @@ class NetworkGameFacade:
         and advance predicted in-flight motion. Returns the fresh snapshot."""
         self._elapsed_ms += dt_ms
         for message in self._client.recv_all():
-            self._handlers[message["type"]](message)
+            handler = self._handlers.get(message["type"])
+            if handler is not None:
+                handler(message)
         self._motions.advance_all(dt_ms)
         return self.snapshot()
 

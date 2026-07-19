@@ -7,7 +7,7 @@ import asyncio
 from dataclasses import dataclass
 
 from bus.event_bus import EventBus
-from config import TICK_MS
+from config import DISCONNECT_GRACE_MS, TICK_MS
 from engine.game_engine import Arrived, Captured, GameEngine, Halted, Promoted
 from model.board import Board
 from net import protocol
@@ -40,17 +40,31 @@ class GameRoom:
     """Seats up to two sockets (one per color), forwards their move/jump
     commands to a GameEngine, and broadcasts every resulting wire message to
     both. Re-publishes each engine outcome onto the shared EventBus first, so
-    anything else interested (the write-log, later an ELO updater) sees it
-    the same instant connected clients do.
+    anything else interested (the write-log, an ELO updater) sees it the
+    same instant connected clients do.
+
+    Also seats up to two locally-driven bots (net/bot_player.py) in place of
+    a websocket, and tracks a grace-then-forfeit timer per color when its
+    socket disconnects mid-game (see leave()/rejoin()) - the tick loop itself
+    never depends on either player being connected, so a disconnect can only
+    ever affect fairness/outcome, never stall the simulation.
     """
 
-    def __init__(self, game_id: str, board: Board, bus: EventBus):
+    def __init__(
+        self, game_id: str, board: Board, bus: EventBus,
+        disconnect_grace_ms: int = DISCONNECT_GRACE_MS, tick_ms: int = TICK_MS,
+    ):
         self.game_id = game_id
         self.state_version = 0
         self._engine = GameEngine(board)
         self._bus = bus
+        self._disconnect_grace_ms = disconnect_grace_ms
+        self._tick_ms = tick_ms
         self._sockets: dict[str, object] = {}
         self._players: dict[str, object | None] = {}
+        self._bots: dict[str, object] = {}
+        self._disconnect_tasks: dict[str, asyncio.Task] = {}
+        self._ended = False  # set once the game ends for any reason: king capture or forfeit
         self._tick_task: asyncio.Task | None = None
         self._engine.subscribe(self._on_engine_outcome)
 
@@ -61,9 +75,19 @@ class GameRoom:
     def stop(self) -> None:
         if self._tick_task is not None:
             self._tick_task.cancel()
+        for task in self._disconnect_tasks.values():
+            task.cancel()
+        self._disconnect_tasks.clear()
+
+    @property
+    def ended(self) -> bool:
+        return self._ended
 
     def snapshot(self):
         return self._engine.snapshot()
+
+    def legal_destinations(self, source):
+        return self._engine.legal_destinations(source)
 
     def join(self, websocket, player=None) -> str | None:
         """Seat websocket in the first free color slot. Returns the assigned
@@ -79,10 +103,32 @@ class GameRoom:
                 return color
         return None
 
+    def attach_bot(self, color: str, bot) -> None:
+        """Seat a locally-driven bot (net/bot_player.py, no websocket) in
+        color. GameRoom calls bot.take_turn() once per tick, the same
+        cadence a real player's moves resolve at."""
+        self._bots[color] = bot
+
     def leave(self, websocket) -> None:
-        for color, socket in list(self._sockets.items()):
+        """A connection dropped. If the game is still running, start a
+        grace-then-forfeit timer for whichever color it held - the tick loop
+        keeps running throughout (see module docstring); only a forfeit, not
+        a stall, is ever at stake."""
+        color = self.color_of(websocket)
+        for c, socket in list(self._sockets.items()):
             if socket is websocket:
-                del self._sockets[color]
+                del self._sockets[c]
+        if color is not None and not self._ended:
+            self._start_disconnect_timer(color)
+
+    def rejoin(self, websocket, color: str) -> None:
+        """Re-seat websocket in color - a previously-disconnected player
+        reconnecting within the grace window - and cancel its pending
+        forfeit timer."""
+        self._sockets[color] = websocket
+        task = self._disconnect_tasks.pop(color, None)
+        if task is not None:
+            task.cancel()
 
     def color_of(self, websocket) -> str | None:
         for color, socket in self._sockets.items():
@@ -90,13 +136,30 @@ class GameRoom:
                 return color
         return None
 
+    def color_of_player(self, player) -> str | None:
+        """Which color, if any, player was seated as - used to resolve a
+        rejoin_game request back to a color. Matched by username rather than
+        object identity: a reconnecting session's User comes from a fresh
+        DB query (net/auth.py's handle_login), never the same Python object
+        the original connection's join() call stored."""
+        if player is None:
+            return None
+        for color, seated in self._players.items():
+            if seated is not None and seated.username == player.username:
+                return color
+        return None
+
     def handle_request_move(self, message: dict) -> None:
+        if self._ended:
+            return
         source = protocol.position_from_wire(message["source"])
         destination = protocol.position_from_wire(message["destination"])
         result = self._engine.request_move(source, destination)
         self._broadcast(protocol.move_result(self.game_id, source, destination, result))
 
     def handle_request_jump(self, message: dict) -> None:
+        if self._ended:
+            return
         source = protocol.position_from_wire(message["source"])
         destination = protocol.position_from_wire(message["destination"])
         self._engine.request_jump(source, destination)
@@ -104,20 +167,17 @@ class GameRoom:
 
     async def _tick_loop(self) -> None:
         while not self._engine.game_over:
-            await asyncio.sleep(TICK_MS / 1000)
-            self._engine.wait(TICK_MS)
+            await asyncio.sleep(self._tick_ms / 1000)
+            for bot in self._bots.values():
+                bot.take_turn()
+            self._engine.wait(self._tick_ms)
 
     def _on_engine_outcome(self, outcome) -> None:
         self.state_version += 1
         self._bus.publish(f"game.{self.game_id}", outcome)
         self._broadcast(protocol.outcome(_OUTCOME_TYPE[type(outcome)], self.game_id, self.state_version, outcome))
         if self._engine.game_over:
-            winner = self._winner(outcome)
-            self._broadcast(protocol.game_over(self.game_id, self.state_version, "king_capture", winner))
-            self._bus.publish(
-                f"game.{self.game_id}",
-                GameEnded(self.game_id, self._players.get("white"), self._players.get("black"), winner),
-            )
+            self._end_game("king_capture", self._winner(outcome))
 
     @staticmethod
     def _winner(ending_outcome) -> str | None:
@@ -127,6 +187,28 @@ class GameRoom:
             return None
         captured_color = "white" if ending_outcome.captured_token[0] == "w" else "black"
         return "black" if captured_color == "white" else "white"
+
+    def _start_disconnect_timer(self, color: str) -> None:
+        self._disconnect_tasks[color] = asyncio.create_task(self._forfeit_after_grace(color))
+        self._broadcast(protocol.opponent_disconnected(self.game_id, self._disconnect_grace_ms))
+
+    async def _forfeit_after_grace(self, color: str) -> None:
+        await asyncio.sleep(self._disconnect_grace_ms / 1000)
+        del self._disconnect_tasks[color]
+        winner = "black" if color == "white" else "white"
+        self._end_game("opponent_disconnected", winner)
+
+    def _end_game(self, reason: str, winner: str | None) -> None:
+        if self._ended:
+            return
+        self._ended = True
+        self.stop()
+        self.state_version += 1
+        self._broadcast(protocol.game_over(self.game_id, self.state_version, reason, winner))
+        self._bus.publish(
+            f"game.{self.game_id}",
+            GameEnded(self.game_id, self._players.get("white"), self._players.get("black"), winner),
+        )
 
     def _broadcast(self, message: dict) -> None:
         text = protocol.encode(message)

@@ -16,6 +16,9 @@ REQUEST_MOVE = "request_move"
 REQUEST_JUMP = "request_jump"
 LOGIN = "login"
 REGISTER = "register"
+PLAY = "play"
+CANCEL_MATCHMAKING = "cancel_matchmaking"
+REJOIN_GAME = "rejoin_game"
 
 # server -> client
 GAME_START = "game_start"
@@ -28,6 +31,8 @@ HALTED = "halted"
 PROMOTED = "promoted"
 GAME_OVER = "game_over"
 LOGIN_RESULT = "login_result"
+MATCHMAKING_STATUS = "matchmaking_status"
+OPPONENT_DISCONNECTED = "opponent_disconnected"
 ERROR = "error"
 
 
@@ -152,3 +157,23 @@ def register(username: str, password: str) -> dict:
 
 def login_result(success: bool, reason: str | None, username: str | None, elo: int | None) -> dict:
     return {"type": LOGIN_RESULT, "success": success, "reason": reason, "username": username, "elo": elo}
+
+
+def play() -> dict:
+    return {"type": PLAY}
+
+
+def cancel_matchmaking() -> dict:
+    return {"type": CANCEL_MATCHMAKING}
+
+
+def rejoin_game(game_id: str) -> dict:
+    return {"type": REJOIN_GAME, "game_id": game_id}
+
+
+def matchmaking_status(status: str) -> dict:
+    return {"type": MATCHMAKING_STATUS, "status": status}
+
+
+def opponent_disconnected(game_id: str, forfeit_in_ms: int) -> dict:
+    return {"type": OPPONENT_DISCONNECTED, "game_id": game_id, "forfeit_in_ms": forfeit_in_ms}
