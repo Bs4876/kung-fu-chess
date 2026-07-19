@@ -59,3 +59,7 @@ def test_custom_player_names_override_settings_defaults():
     screen = GameScreen(GameFacade(GameEngine(BoardParser().parse(small_board()))), "Alice", "Bob")
     assert screen._player_labels.white_name == "Alice"
     assert screen._player_labels.black_name == "Bob"
+
+
+def test_handle_key_does_not_raise():
+    screen_for(small_board()).handle_key(65)

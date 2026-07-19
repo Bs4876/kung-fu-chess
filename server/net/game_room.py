@@ -4,6 +4,7 @@ disconnected client can never stall the simulation for the other one.
 """
 
 import asyncio
+from dataclasses import dataclass
 
 from bus.event_bus import EventBus
 from config import TICK_MS
@@ -21,6 +22,20 @@ _OUTCOME_TYPE = {
 }
 
 
+@dataclass
+class GameEnded:
+    """Published onto the bus (alongside the wire-level game_over broadcast)
+    the instant a game ends, carrying whichever opaque "player" object (if
+    any - see GameRoom.join) each color was seated with - a bus subscriber
+    like persistence.elo_updater.EloUpdater reacts to this generically,
+    without GameRoom needing to know anything about ELO/persistence itself."""
+
+    game_id: str
+    white_player: object | None
+    black_player: object | None
+    winner: str | None
+
+
 class GameRoom:
     """Seats up to two sockets (one per color), forwards their move/jump
     commands to a GameEngine, and broadcasts every resulting wire message to
@@ -35,6 +50,7 @@ class GameRoom:
         self._engine = GameEngine(board)
         self._bus = bus
         self._sockets: dict[str, object] = {}
+        self._players: dict[str, object | None] = {}
         self._tick_task: asyncio.Task | None = None
         self._engine.subscribe(self._on_engine_outcome)
 
@@ -49,12 +65,17 @@ class GameRoom:
     def snapshot(self):
         return self._engine.snapshot()
 
-    def join(self, websocket) -> str | None:
+    def join(self, websocket, player=None) -> str | None:
         """Seat websocket in the first free color slot. Returns the assigned
-        color, or None if the room already has two players."""
+        color, or None if the room already has two players.
+
+        player is an opaque identity (typically a persistence.users_repository.User,
+        None for anonymous/unauthenticated) carried through to GameEnded once
+        the game ends - GameRoom never inspects it itself."""
         for color in COLORS:
             if color not in self._sockets:
                 self._sockets[color] = websocket
+                self._players[color] = player
                 return color
         return None
 
@@ -91,7 +112,12 @@ class GameRoom:
         self._bus.publish(f"game.{self.game_id}", outcome)
         self._broadcast(protocol.outcome(_OUTCOME_TYPE[type(outcome)], self.game_id, self.state_version, outcome))
         if self._engine.game_over:
-            self._broadcast(protocol.game_over(self.game_id, self.state_version, "king_capture", self._winner(outcome)))
+            winner = self._winner(outcome)
+            self._broadcast(protocol.game_over(self.game_id, self.state_version, "king_capture", winner))
+            self._bus.publish(
+                f"game.{self.game_id}",
+                GameEnded(self.game_id, self._players.get("white"), self._players.get("black"), winner),
+            )
 
     @staticmethod
     def _winner(ending_outcome) -> str | None:

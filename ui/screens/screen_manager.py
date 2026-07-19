@@ -11,6 +11,8 @@ Every screen shown through this must implement:
 - render() -> Img: compose this frame's canvas.
 - handle_mouse(event, x, y, flags, param) -> None: react to a click, or do
   nothing at all (most screens only care about a subset of mouse events).
+- handle_key(key: int | None) -> None: react to a keypress, or do nothing
+  (only LoginScreen's text fields currently care about this).
 """
 
 
@@ -31,6 +33,7 @@ class ScreenManager:
 
     def render_frame(self, dt_ms: int):
         """Advance and render the current screen for this frame."""
+        self._screen.handle_key(self._window.last_key())
         self._screen.tick(dt_ms)
         return self._screen.render()
 

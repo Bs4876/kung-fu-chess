@@ -15,7 +15,7 @@ from net.ws_server import serve
 
 @pytest.fixture
 async def running_server(tmp_path):
-    server = await serve(host="localhost", port=0, log_dir=tmp_path)
+    server = await serve(host="localhost", port=0, log_dir=tmp_path, db_path=tmp_path / "test.db")
     port = server.sockets[0].getsockname()[1]
     yield port
     server.close()
@@ -57,3 +57,28 @@ async def test_a_third_and_fourth_connection_are_paired_into_a_separate_room(run
         assert first_room == second_room
         assert third_room == fourth_room
         assert first_room != third_room
+
+
+async def test_register_then_login_over_a_real_socket(running_server):
+    uri = f"ws://localhost:{running_server}"
+
+    # AnonymousLobby.join() blocks a lone connection until a second one
+    # pairs with it (see net/anonymous_lobby.py) - _opponent exists purely
+    # to unblock that pairing so ws gets its game_start and the dispatch
+    # loop (where login/register are handled) actually starts.
+    async with websockets.connect(uri) as ws, websockets.connect(uri) as _opponent:
+        await ws.recv()  # game_start - not what this test cares about
+
+        await ws.send(protocol.encode(protocol.register("alice", "hunter2")))
+        register_response = protocol.decode(await ws.recv())
+        assert register_response["success"] is True
+        assert register_response["username"] == "alice"
+
+        await ws.send(protocol.encode(protocol.login("alice", "wrong password")))
+        failed_login = protocol.decode(await ws.recv())
+        assert failed_login["success"] is False
+
+        await ws.send(protocol.encode(protocol.login("alice", "hunter2")))
+        ok_login = protocol.decode(await ws.recv())
+        assert ok_login["success"] is True
+        assert ok_login["elo"] == register_response["elo"]

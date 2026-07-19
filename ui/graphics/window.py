@@ -24,6 +24,7 @@ class Window:
         self._title = title
         self._aspect_ratio: float | None = None
         self._last_size: tuple[int, int] | None = None
+        self._last_key: int | None = None
         cv2.namedWindow(title, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
 
     def show_frame(self, canvas) -> None:
@@ -78,9 +79,16 @@ class Window:
         # -1 means "no key this frame" - must check before masking with 0xFF,
         # since masking first would make that indistinguishable from keycode 255.
         key = None if raw_key == -1 else raw_key & 0xFF
+        self._last_key = key
         if key == WINDOW_ESC_KEY:
             return False
         return cv2.getWindowProperty(self._title, cv2.WND_PROP_VISIBLE) >= 1
+
+    def last_key(self) -> int | None:
+        """The raw key code captured by this frame's poll() (masked to
+        0xFF), or None if no key was pressed - for whichever screen wants
+        keyboard input (e.g. LoginScreen's username/password fields)."""
+        return self._last_key
 
     def set_mouse_callback(self, handler) -> None:
         """Register handler(event, x, y, flags, param) for mouse events on this window."""

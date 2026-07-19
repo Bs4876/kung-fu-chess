@@ -64,6 +64,9 @@ class GameScreen:
     def handle_mouse(self, event, x, y, flags, param) -> None:
         self._mouse_controller.handle_event(event, x, y, flags, param)
 
+    def handle_key(self, key: int | None) -> None:
+        pass
+
     def tick(self, dt_ms: int) -> None:
         # Age existing flashes/cooldowns by dt_ms *before* facade.tick() can
         # start new ones this frame - otherwise a cooldown that only just

@@ -36,6 +36,18 @@ def test_render_frame_ticks_with_dt_then_returns_the_rendered_frame():
     assert result == "frame2"
 
 
+def test_render_frame_forwards_the_windows_last_key_to_the_current_screen():
+    manager, window = build()
+    screen = MagicMock()
+    manager.show(screen)
+    screen.reset_mock()
+    window.last_key.return_value = 65  # 'A'
+
+    manager.render_frame(16)
+
+    screen.handle_key.assert_called_once_with(65)
+
+
 def test_mouse_events_are_forwarded_to_the_current_screen():
     manager, window = build()
     handler = window.set_mouse_callback.call_args[0][0]

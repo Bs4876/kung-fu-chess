@@ -4,7 +4,7 @@ import json
 from bus.event_bus import EventBus
 from model.board import Board
 from net import protocol
-from net.game_room import GameRoom
+from net.game_room import GameEnded, GameRoom
 
 
 def board_from(rows):
@@ -135,3 +135,32 @@ async def test_outcomes_are_published_onto_the_bus_under_the_game_topic():
     room._engine.wait(2000)
 
     assert len(received) == 1
+
+
+async def test_join_carries_an_opaque_player_identity_through_to_color_of():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus())
+    alice = object()
+    room.join(FakeSocket(), player=alice)
+    assert room._players["white"] is alice
+
+
+async def test_join_defaults_player_to_none_for_anonymous_sockets():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus())
+    room.join(FakeSocket())
+    assert room._players["white"] is None
+
+
+async def test_game_ended_is_published_onto_the_bus_with_both_players_and_the_winner():
+    bus = EventBus()
+    received = []
+    bus.subscribe("game.1", received.append)
+    room = GameRoom("1", board_from(["wR . bK", ". . .", ". . ."]), bus)
+    alice, bob = object(), object()
+    room.join(FakeSocket(), player=alice)
+    room.join(FakeSocket(), player=bob)
+
+    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room._engine.wait(2000)
+
+    game_ended = [e for e in received if isinstance(e, GameEnded)]
+    assert game_ended == [GameEnded(game_id="1", white_player=alice, black_player=bob, winner="white")]

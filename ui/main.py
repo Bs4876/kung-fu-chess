@@ -8,10 +8,14 @@ from engine.game_engine import GameEngine
 from graphics.window import Window
 from model.starting_position import STARTING_POSITION
 from network.network_game_facade import connect
+from network.ws_client import WsClient
 from screens.game_screen import GameScreen
 from screens.home_screen import HomeScreen
+from screens.login_screen import LoginScreen
 from screens.screen_manager import ScreenManager
 from state.game_facade import GameFacade
+
+_SERVER_URI = f"ws://{WS_HOST}:{WS_PORT}"
 
 
 def build_local_game_screen() -> GameScreen:
@@ -33,9 +37,19 @@ def build_network_game_screen() -> GameScreen:
     stage replaces the anonymous lobby with real matchmaking and adds that
     waiting state; this is deliberately as simple as it can be for now.
     """
-    uri = f"ws://{WS_HOST}:{WS_PORT}"
-    facade = connect(uri)
-    return GameScreen(facade)
+    return GameScreen(connect(_SERVER_URI))
+
+
+def build_login_screen(on_success) -> LoginScreen:
+    """Open a fresh connection and show the login/register screen on it.
+
+    Login doesn't gate Play yet - see home_screen.py's docstring - so this
+    connection is separate from whatever one build_network_game_screen()
+    opens later; logging in here is a standalone, working path, not yet a
+    prerequisite for anything.
+    """
+    client = WsClient(_SERVER_URI)
+    return LoginScreen(client, on_success)
 
 
 def main() -> None:
@@ -46,7 +60,16 @@ def main() -> None:
     def on_play() -> None:
         screen_manager.show(build_network_game_screen())
 
-    screen_manager.show(HomeScreen(on_play))
+    def on_login() -> None:
+        def on_success(username: str, elo: int) -> None:
+            screen_manager.show(build_home_screen())
+
+        screen_manager.show(build_login_screen(on_success))
+
+    def build_home_screen() -> HomeScreen:
+        return HomeScreen(on_play, on_login)
+
+    screen_manager.show(build_home_screen())
 
     while window.poll():
         window.maintain_aspect_ratio()

@@ -16,7 +16,7 @@ from network.network_game_facade import connect
 
 @pytest.fixture
 async def running_server(tmp_path):
-    server = await serve(host="localhost", port=0, log_dir=tmp_path)
+    server = await serve(host="localhost", port=0, log_dir=tmp_path, db_path=tmp_path / "test.db")
     port = server.sockets[0].getsockname()[1]
     yield port
     server.close()

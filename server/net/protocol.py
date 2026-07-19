@@ -14,6 +14,8 @@ from model.position import Position
 # client -> server
 REQUEST_MOVE = "request_move"
 REQUEST_JUMP = "request_jump"
+LOGIN = "login"
+REGISTER = "register"
 
 # server -> client
 GAME_START = "game_start"
@@ -25,6 +27,7 @@ CAPTURED = "captured"
 HALTED = "halted"
 PROMOTED = "promoted"
 GAME_OVER = "game_over"
+LOGIN_RESULT = "login_result"
 ERROR = "error"
 
 
@@ -137,3 +140,15 @@ def game_over(game_id: str, state_version: int, reason: str, winner: str | None)
 
 def error(code: str, message: str) -> dict:
     return {"type": ERROR, "code": code, "message": message}
+
+
+def login(username: str, password: str) -> dict:
+    return {"type": LOGIN, "username": username, "password": password}
+
+
+def register(username: str, password: str) -> dict:
+    return {"type": REGISTER, "username": username, "password": password}
+
+
+def login_result(success: bool, reason: str | None, username: str | None, elo: int | None) -> dict:
+    return {"type": LOGIN_RESULT, "success": success, "reason": reason, "username": username, "elo": elo}
