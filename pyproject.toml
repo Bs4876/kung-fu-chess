@@ -6,6 +6,7 @@ dependencies = [
     "opencv-python>=5.0.0.93",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
+    "websockets>=16.1.1",
 ]
 
 [tool.pytest.ini_options]
@@ -16,6 +17,9 @@ dependencies = [
 # `import main` expecting server/main.py). importlib mode gives every test
 # module a proper qualified name instead, sidestepping the collision entirely.
 addopts = "--import-mode=importlib"
+# Lets async def test_*/fixture functions (server/net's WS tests) run as
+# coroutines without a @pytest.mark.asyncio on every single one.
+asyncio_mode = "auto"
 
 [tool.pyright]
 # ui/ scripts add server/ to sys.path at runtime (see ui/server_bridge.py); tell
@@ -23,3 +27,8 @@ addopts = "--import-mode=importlib"
 # Board`, `from config import CELL_SIZE`, etc.) resolve instead of showing as
 # unresolved-import warnings.
 extraPaths = ["server", "ui"]
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.4.0",
+]
