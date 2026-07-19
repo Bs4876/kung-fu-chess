@@ -22,6 +22,19 @@ _OUTCOME_TYPE = {
 }
 
 
+async def _safe_send(socket, text: str) -> None:
+    """Broadcasting is best-effort: a socket can close in the moment between
+    being read from self._sockets and this fire-and-forget send actually
+    running (e.g. right as a disconnect is being processed) - that race is
+    already handled by the disconnect-grace/forfeit machinery, so a failed
+    send here just gets silently dropped instead of surfacing as an
+    unretrieved-exception warning on this fire-and-forget task."""
+    try:
+        await socket.send(text)
+    except Exception:
+        pass
+
+
 @dataclass
 class GameEnded:
     """Published onto the bus (alongside the wire-level game_over broadcast)
@@ -213,4 +226,4 @@ class GameRoom:
     def _broadcast(self, message: dict) -> None:
         text = protocol.encode(message)
         for socket in self._sockets.values():
-            asyncio.create_task(socket.send(text))
+            asyncio.create_task(_safe_send(socket, text))

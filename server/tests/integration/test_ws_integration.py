@@ -64,6 +64,29 @@ async def test_two_matched_players_play_a_full_move_over_real_sockets(running_se
         assert arrived["type"] == protocol.ARRIVED
 
 
+async def test_malformed_move_gets_an_error_and_does_not_crash_the_connection_or_the_room(running_server):
+    uri = f"ws://localhost:{running_server}"
+
+    async with websockets.connect(uri) as white_ws, websockets.connect(uri) as black_ws:
+        white_start, _black_start = await _play_and_match(white_ws, black_ws)
+
+        # A well-formed envelope with a known type but missing the fields
+        # its handler needs (request_move with no "destination") must not
+        # take the connection down.
+        await white_ws.send(protocol.encode({"type": protocol.REQUEST_MOVE, "source": {"row": 6, "col": 0}}))
+        error_response = protocol.decode(await white_ws.recv())
+        assert error_response["type"] == protocol.ERROR
+        assert error_response["code"] == "bad_message"
+
+        # The same (still-open) connection, and the room it's in, both keep
+        # working normally afterward - the bad message didn't crash anything.
+        await white_ws.send(protocol.encode(protocol.request_move(
+            white_start["game_id"], Position(6, 0), Position(5, 0),
+        )))
+        accepted = protocol.decode(await white_ws.recv())
+        assert accepted["type"] == protocol.MOVE_ACCEPTED
+
+
 async def test_register_then_login_over_a_real_socket(running_server):
     uri = f"ws://localhost:{running_server}"
 
