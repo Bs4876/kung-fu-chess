@@ -71,7 +71,7 @@ async def test_viewer_receives_broadcasts_alongside_seated_players():
     room.join(black)
     room.add_viewer(viewer)
 
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(white, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     await _flush()
 
     assert viewer.sent[-1]["type"] == protocol.MOVE_ACCEPTED
@@ -84,7 +84,7 @@ async def test_leave_viewer_stops_further_broadcasts_to_it():
     room.add_viewer(viewer)
     room.leave_viewer(viewer)
 
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(socket, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     await _flush()
 
     assert viewer.sent == []
@@ -101,7 +101,7 @@ async def test_accepted_move_broadcasts_move_accepted_to_every_seated_player():
     room.join(white)
     room.join(black)
 
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(white, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     await _flush()
 
     for socket in (white, black):
@@ -113,11 +113,48 @@ async def test_illegal_move_broadcasts_move_rejected():
     socket = FakeSocket()
     room.join(socket)
 
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 1, "col": 1}})
+    room.handle_request_move(socket, {"source": {"row": 0, "col": 0}, "destination": {"row": 1, "col": 1}})
     await _flush()
 
     assert socket.sent[-1]["type"] == protocol.MOVE_REJECTED
     assert socket.sent[-1]["reason"] == "illegal_piece_move"
+
+
+async def test_a_player_cannot_move_the_opponents_piece():
+    room = GameRoom("1", board_from(["wR bR .", ". . .", ". . ."]), EventBus())
+    white, black = FakeSocket(), FakeSocket()
+    room.join(white)  # white
+    room.join(black)  # black
+
+    room.handle_request_move(black, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    await _flush()
+
+    for socket in (white, black):
+        assert socket.sent == []  # rejected before ever reaching the engine, no broadcast at all
+
+
+async def test_a_player_cannot_jump_the_opponents_piece():
+    room = GameRoom("1", board_from(["wR bR .", ". . .", ". . ."]), EventBus())
+    white, black = FakeSocket(), FakeSocket()
+    room.join(white)  # white
+    room.join(black)  # black
+
+    room.handle_request_jump(white, {"source": {"row": 0, "col": 1}, "destination": {"row": 2, "col": 2}})
+    await _flush()
+
+    for socket in (white, black):
+        assert socket.sent == []
+
+
+async def test_an_unseated_socket_cannot_move_any_piece():
+    room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus())
+    room.join(FakeSocket())
+    stranger = FakeSocket()
+
+    room.handle_request_move(stranger, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    await _flush()
+
+    assert stranger.sent == []
 
 
 async def test_jump_broadcasts_jump_started_to_every_seated_player():
@@ -126,7 +163,7 @@ async def test_jump_broadcasts_jump_started_to_every_seated_player():
     room.join(white)
     room.join(black)
 
-    room.handle_request_jump({"source": {"row": 0, "col": 0}, "destination": {"row": 2, "col": 2}})
+    room.handle_request_jump(white, {"source": {"row": 0, "col": 0}, "destination": {"row": 2, "col": 2}})
     await _flush()
 
     for socket in (white, black):
@@ -137,7 +174,7 @@ async def test_arrival_increments_state_version_and_broadcasts_the_outcome():
     room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), EventBus())
     socket = FakeSocket()
     room.join(socket)
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(socket, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     await _flush()
 
     room._engine.wait(2000)
@@ -153,7 +190,7 @@ async def test_king_capture_broadcasts_game_over_with_the_correct_winner():
     room = GameRoom("1", board_from(["wR . bK", ". . .", ". . ."]), EventBus())
     socket = FakeSocket()
     room.join(socket)
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(socket, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     await _flush()
 
     room._engine.wait(2000)
@@ -169,8 +206,10 @@ async def test_outcomes_are_published_onto_the_bus_under_the_game_topic():
     received = []
     bus.subscribe("game.1", received.append)
     room = GameRoom("1", board_from(["wR . .", ". . .", ". . ."]), bus)
+    socket = FakeSocket()
+    room.join(socket)
 
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(socket, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     room._engine.wait(2000)
 
     assert len(received) == 1
@@ -195,10 +234,11 @@ async def test_game_ended_is_published_onto_the_bus_with_both_players_and_the_wi
     bus.subscribe("game.1", received.append)
     room = GameRoom("1", board_from(["wR . bK", ". . .", ". . ."]), bus)
     alice, bob = object(), object()
-    room.join(FakeSocket(), player=alice)
+    white_socket = FakeSocket()
+    room.join(white_socket, player=alice)
     room.join(FakeSocket(), player=bob)
 
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(white_socket, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     room._engine.wait(2000)
 
     game_ended = [e for e in received if isinstance(e, GameEnded)]
@@ -287,7 +327,7 @@ async def test_leave_after_the_game_already_ended_does_not_start_a_forfeit_timer
     winner_socket, loser_socket = FakeSocket(), FakeSocket()
     room.join(winner_socket)
     room.join(loser_socket)
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(winner_socket, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     room._engine.wait(2000)  # king capture - game already over
     await _flush()
 
@@ -306,7 +346,7 @@ async def test_moves_are_ignored_once_the_game_has_ended_by_forfeit():
     await asyncio.sleep(0.05)  # forfeited by now
 
     remaining.sent.clear()
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(remaining, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     await _flush()
 
     assert remaining.sent == []

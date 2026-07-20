@@ -46,13 +46,17 @@ async def test_two_network_game_facades_play_a_full_move_over_a_real_socket(runn
     # Both of these block (WS handshake, login round trip, then game_start) -
     # run them concurrently on worker threads, or the first call would sit
     # in matchmaking forever waiting for a second player who never gets the
-    # chance to connect.
-    white, black = await asyncio.gather(
+    # chance to connect. Which of the two actually lands "white" is a race
+    # (both connect concurrently on separate threads) - resolve it from
+    # .color below rather than assuming alice always wins it, now that the
+    # server actually enforces per-color piece ownership on every move.
+    alice, bob = await asyncio.gather(
         asyncio.to_thread(_register_login_and_play, uri, "alice"),
         asyncio.to_thread(_register_login_and_play, uri, "bob"),
     )
-    assert {white.color, black.color} == {"white", "black"}
-    assert white.game_id == black.game_id
+    assert {alice.color, bob.color} == {"white", "black"}
+    assert alice.game_id == bob.game_id
+    white, black = (alice, bob) if alice.color == "white" else (bob, alice)
 
     white.request_move(Position(6, 0), Position(5, 0))
     await asyncio.sleep(0.3)  # let the request/move_accepted round trip land

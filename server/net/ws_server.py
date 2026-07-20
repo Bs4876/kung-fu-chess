@@ -182,7 +182,7 @@ class ConnectionHandler:
         elif message_type == protocol.WATCH_ROOM:
             await self.watch_room(message)
         elif self._room is not None and message_type in _ROOM_HANDLERS:
-            _ROOM_HANDLERS[message_type](self._room, message)
+            _ROOM_HANDLERS[message_type](self._room, self._websocket, message)
         else:
             await self.send(protocol.error("bad_message", f"unexpected message: {message_type}"))
 

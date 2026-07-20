@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from bus.event_bus import EventBus
 from config import DISCONNECT_GRACE_MS, TICK_MS
 from engine.game_engine import Arrived, Captured, GameEngine, Halted, Promoted
-from model.board import Board
+from model.board import EMPTY, Board
 from net import protocol
 
 COLORS = ("white", "black")
@@ -173,21 +173,45 @@ class GameRoom:
                 return color
         return None
 
-    def handle_request_move(self, message: dict) -> None:
+    def handle_request_move(self, websocket, message: dict) -> None:
         if self._ended:
             return
         source = protocol.position_from_wire(message["source"])
         destination = protocol.position_from_wire(message["destination"])
+        if not self._owns_piece_at(websocket, source):
+            return
         result = self._engine.request_move(source, destination)
         self._broadcast(protocol.move_result(self.game_id, source, destination, result))
 
-    def handle_request_jump(self, message: dict) -> None:
+    def handle_request_jump(self, websocket, message: dict) -> None:
         if self._ended:
             return
         source = protocol.position_from_wire(message["source"])
         destination = protocol.position_from_wire(message["destination"])
+        if not self._owns_piece_at(websocket, source):
+            return
         self._engine.request_jump(source, destination)
         self._broadcast(protocol.jump_started(self.game_id, source, destination))
+
+    def _owns_piece_at(self, websocket, source) -> bool:
+        """True iff websocket is seated as the color of the piece at source -
+        guards handle_request_move/handle_request_jump against one seated
+        player moving or jumping the *other* player's pieces (neither
+        GameEngine nor RuleEngine has any notion of "whose piece is this",
+        only board-legality - this is the one place that identity check
+        belongs). An out-of-bounds or empty source is never "owned" by
+        anyone, same as it already isn't a legal move/jump target."""
+        color = self.color_of(websocket)
+        if color is None:
+            return False
+        board = self._engine.snapshot().board
+        if not board.in_bounds(source):
+            return False
+        token = board.get_piece(source)
+        if token == EMPTY:
+            return False
+        piece_color = "white" if token[0] == "w" else "black"
+        return piece_color == color
 
     async def _tick_loop(self) -> None:
         while not self._engine.game_over:

@@ -42,10 +42,11 @@ async def test_two_logged_in_users_play_to_king_capture_and_both_elo_ratings_upd
     assert handle_login({"username": "bob"}, bob_session, users)["success"]
 
     room = GameRoom("1", board_with_a_king_capture_one_move_away(), bus)
-    room.join(FakeSocket(), player=alice_session.user)  # white
+    alice_socket = FakeSocket()
+    room.join(alice_socket, player=alice_session.user)  # white
     room.join(FakeSocket(), player=bob_session.user)  # black
 
-    room.handle_request_move({"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
+    room.handle_request_move(alice_socket, {"source": {"row": 0, "col": 0}, "destination": {"row": 0, "col": 2}})
     room._engine.wait(2000)  # 2 cells * MOVE_TRAVEL_TIME_PER_CELL(1000) -> king capture
 
     expected_alice, expected_bob = update_ratings(alice_session.user.elo, bob_session.user.elo, score_a=1.0)

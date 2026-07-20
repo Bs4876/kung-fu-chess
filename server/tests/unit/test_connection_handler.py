@@ -216,10 +216,14 @@ async def test_rejoin_with_no_matching_game_is_rejected(tmp_path):
 async def test_room_scoped_message_is_routed_to_the_seated_room(tmp_path):
     handler, socket = await _logged_in_handler(tmp_path)
     room = handler._games.new_room()
-    room.join(socket, player=handler.session.user)
+    room.join(socket, player=handler.session.user)  # seats socket as white
     handler._room = room
 
-    await handler.route(protocol.request_move(room.game_id, Position(0, 0), Position(0, 1)))
+    # (6, 0) -> (5, 0): white's own pawn - room.join above seats socket as
+    # white, and handle_request_move now checks piece ownership, so this
+    # must be a move white can actually make for the routing itself (not
+    # ownership) to be what's under test here.
+    await handler.route(protocol.request_move(room.game_id, Position(6, 0), Position(5, 0)))
     await asyncio.sleep(0)  # let GameRoom's fire-and-forget broadcast run
 
     assert socket.sent[-1]["type"] in (protocol.MOVE_ACCEPTED, protocol.MOVE_REJECTED)
