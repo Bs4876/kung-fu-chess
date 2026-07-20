@@ -13,6 +13,7 @@ import queue
 import threading
 
 import websockets
+from websockets.asyncio.client import ClientConnection
 
 from net import protocol
 
@@ -39,7 +40,7 @@ class WsClient:
         self._on_event = on_event or (lambda kind, payload: None)
         self._inbound: queue.Queue = queue.Queue()
         self._loop: asyncio.AbstractEventLoop | None = None
-        self._connection = None
+        self._connection: ClientConnection | None = None
         self._connect_error: Exception | None = None
         self._ready = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -53,6 +54,10 @@ class WsClient:
     def send(self, message: dict) -> None:
         """Fire-and-forget: hand message to the connection's own event loop
         thread for delivery. Safe to call from the render thread."""
+        # Guaranteed set by the time __init__ returns - _main() sets both
+        # before _ready.set() unblocks the constructor - so this is a real
+        # invariant, not defensive guesswork.
+        assert self._connection is not None and self._loop is not None
         self._on_event("send", {"message": message})
         asyncio.run_coroutine_threadsafe(self._connection.send(protocol.encode(message)), self._loop)
 

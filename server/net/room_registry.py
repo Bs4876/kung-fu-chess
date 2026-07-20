@@ -13,6 +13,10 @@ two into a room are players, anyone after that is a read-only spectator.
 
 import asyncio
 import uuid
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from net.game_room import GameRoom
 
 
 class _PendingRoom:

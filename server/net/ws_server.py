@@ -98,6 +98,10 @@ class ConnectionHandler:
     async def enter_room(self, game_room: GameRoom) -> None:
         self._room = game_room
         color = game_room.color_of(self._websocket)
+        # Every call site seats/re-seats self._websocket in game_room right
+        # before calling this - color is only ever None for the (separate)
+        # viewer path in _watch, never here.
+        assert color is not None
         await self.send(protocol.game_start(game_room.game_id, color, game_room.state_version, game_room.snapshot()))
 
     async def start_matchmaking(self) -> None:
@@ -111,7 +115,7 @@ class ConnectionHandler:
         await self.enter_room(game_room)
 
     async def rejoin(self, message: dict) -> None:
-        target = self._games.get(message.get("game_id"))
+        target = self._games.get(message["game_id"])
         color = target.color_of_player(self.session.user) if target is not None else None
         if target is None or color is None or target.ended:
             await self.send(protocol.error("cannot_rejoin", "no active game to rejoin"))
@@ -186,7 +190,7 @@ class ConnectionHandler:
         else:
             await self.send(protocol.error("bad_message", f"unexpected message: {message_type}"))
 
-    async def dispatch(self, text: str) -> None:
+    async def dispatch(self, text: str | bytes) -> None:
         try:
             message = protocol.decode(text)
         except ValueError as exc:

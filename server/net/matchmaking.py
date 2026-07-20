@@ -8,8 +8,12 @@ actually match on.
 
 import asyncio
 import time
+from typing import TYPE_CHECKING
 
 from config import MATCH_ELO_RANGE, MATCHMAKING_TICK_MS, MATCHMAKING_WAIT_MS
+
+if TYPE_CHECKING:
+    from net.game_room import GameRoom
 
 
 class _Waiting:

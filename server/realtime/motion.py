@@ -56,7 +56,7 @@ def straight_line_meeting_time(a: "Motion", b: "Motion"):
 
 
 class Motion:
-    def __init__(self, piece_token: str, src: Position, dst: Position, start_time: int, travel_time: int = None):
+    def __init__(self, piece_token: str, src: Position, dst: Position, start_time: int, travel_time: int | None = None):
         self.piece_token = piece_token
         self.src = src
         self.dst = dst
@@ -96,7 +96,7 @@ class Motion:
 
 
 class ArrivalEvent:
-    def __init__(self, piece_token: str, src: Position, dst: Position, airborne_dsts: dict = None,
+    def __init__(self, piece_token: str, src: Position, dst: Position, airborne_dsts: dict | None = None,
                  is_jump: bool = False, is_halt: bool = False):
         self.piece_token = piece_token
         self.src = src

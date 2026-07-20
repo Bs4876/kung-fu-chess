@@ -5,26 +5,43 @@ Not a full scene stack (push/pop/back) - the app only ever needs to jump
 straight to a named screen (home -> game, home -> rooms -> game, ...), never
 nest or automatically return to a previous one, so there's nothing here a
 stack would buy that a single slot doesn't already cover.
-
-Every screen shown through this must implement:
-- tick(dt_ms) -> None: advance whatever per-frame state it owns.
-- render() -> Img: compose this frame's canvas.
-- handle_mouse(event, x, y, flags, param) -> None: react to a click, or do
-  nothing at all (most screens only care about a subset of mouse events).
-- handle_key(key: int | None) -> None: react to a keypress, or do nothing
-  (no current screen needs this - login runs in the shell before any window
-  exists - but every screen must implement it since render_frame calls it
-  unconditionally).
 """
+
+from typing import Protocol
+
+from vendor.img import Img
+
+
+class Screen(Protocol):
+    """Every screen shown through ScreenManager must implement this shape -
+    matched structurally (see graphics/protocols.py for the same convention
+    on the rendering side), not by subclassing."""
+
+    def tick(self, dt_ms: int) -> None:
+        """Advance whatever per-frame state this screen owns."""
+
+    def render(self) -> Img:
+        """Compose this frame's canvas."""
+        ...
+
+    def handle_mouse(self, event, x, y, flags, param) -> None:
+        """React to a click, or do nothing (most screens only care about a
+        subset of mouse events)."""
+
+    def handle_key(self, key: int | None) -> None:
+        """React to a keypress, or do nothing (no current screen needs
+        this - login runs in the shell before any window exists - but every
+        screen must implement it since render_frame calls it
+        unconditionally)."""
 
 
 class ScreenManager:
     def __init__(self, window):
         self._window = window
-        self._screen = None
+        self._screen: Screen | None = None
         window.set_mouse_callback(self._handle_mouse)
 
-    def show(self, screen) -> None:
+    def show(self, screen: Screen) -> None:
         """Switch the active screen, sizing the window to fit its first frame -
         screens can be very differently sized (a small home screen vs. a
         board+HUD game screen), so this happens on every switch, not just once
@@ -33,8 +50,9 @@ class ScreenManager:
         screen.tick(0)
         self._window.resize_to(screen.render())
 
-    def render_frame(self, dt_ms: int):
+    def render_frame(self, dt_ms: int) -> Img:
         """Advance and render the current screen for this frame."""
+        assert self._screen is not None  # show() always runs before the render loop starts
         self._screen.handle_key(self._window.last_key())
         self._screen.tick(dt_ms)
         return self._screen.render()

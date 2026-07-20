@@ -7,7 +7,7 @@ other beyond the GameEnded event shape.
 
 from net.game_room import GameEnded
 from persistence.elo import update_ratings
-from persistence.users_repository import UsersRepository
+from persistence.users_repository import User, UsersRepository
 
 
 class EloUpdater:
@@ -22,7 +22,10 @@ class EloUpdater:
         _, event = topic_and_event
         if not isinstance(event, GameEnded):
             return
-        if event.white_player is None or event.black_player is None:
+        # GameEnded.white_player/black_player are deliberately opaque
+        # (object | None - see game_room.py) since GameRoom itself never
+        # needs to know they're Users; this is the one consumer that does.
+        if not isinstance(event.white_player, User) or not isinstance(event.black_player, User):
             return  # anonymous and/or bot games don't affect ELO
         score_white = 1.0 if event.winner == "white" else 0.0 if event.winner == "black" else 0.5
         new_white, new_black = update_ratings(event.white_player.elo, event.black_player.elo, score_white)

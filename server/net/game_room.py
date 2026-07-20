@@ -5,6 +5,7 @@ disconnected client can never stall the simulation for the other one.
 
 import asyncio
 from dataclasses import dataclass
+from typing import Protocol, runtime_checkable
 
 from bus.event_bus import EventBus
 from config import DISCONNECT_GRACE_MS, TICK_MS
@@ -13,6 +14,20 @@ from model.board import EMPTY, Board
 from net import protocol
 
 COLORS = ("white", "black")
+
+
+@runtime_checkable
+class _HasUsername(Protocol):
+    """Just enough structure for color_of_player's own username comparison -
+    join()/_players/GameEnded stay genuinely opaque (`object | None`, see
+    their own docstrings) since GameRoom itself never inspects a player
+    beyond this one method. runtime_checkable so isinstance() can narrow it
+    at the one place that needs to, without forcing every caller/test double
+    that only ever gets stored-and-returned (never compared) to carry a
+    .username it doesn't otherwise need."""
+
+    username: str
+
 
 _OUTCOME_TYPE = {
     Arrived: protocol.ARRIVED,
@@ -101,13 +116,14 @@ class GameRoom:
     def legal_destinations(self, source):
         return self._engine.legal_destinations(source)
 
-    def join(self, websocket, player=None) -> str | None:
+    def join(self, websocket, player: object | None = None) -> str | None:
         """Seat websocket in the first free color slot. Returns the assigned
         color, or None if the room already has two players.
 
         player is an opaque identity (typically a persistence.users_repository.User,
         None for anonymous/unauthenticated) carried through to GameEnded once
-        the game ends - GameRoom never inspects it itself."""
+        the game ends - GameRoom never inspects it itself (color_of_player is
+        the one exception - see _HasUsername above)."""
         for color in COLORS:
             if color not in self._sockets:
                 self._sockets[color] = websocket
@@ -160,16 +176,16 @@ class GameRoom:
                 return color
         return None
 
-    def color_of_player(self, player) -> str | None:
+    def color_of_player(self, player: object | None) -> str | None:
         """Which color, if any, player was seated as - used to resolve a
         rejoin_game request back to a color. Matched by username rather than
         object identity: a reconnecting session's User comes from a fresh
         DB query (net/auth.py's handle_login), never the same Python object
         the original connection's join() call stored."""
-        if player is None:
+        if not isinstance(player, _HasUsername):
             return None
         for color, seated in self._players.items():
-            if seated is not None and seated.username == player.username:
+            if isinstance(seated, _HasUsername) and seated.username == player.username:
                 return color
         return None
 

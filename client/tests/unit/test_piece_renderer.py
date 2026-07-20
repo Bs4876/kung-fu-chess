@@ -113,11 +113,11 @@ def test_a_motion_never_reconciled_by_the_facade_still_exits_its_move_state_once
     snapshot = FakeSnapshot({Position(0, 0): "wR"})
     stuck_motion = FakeMotion(Position(0, 0), Position(0, 2), progress=1.0, is_jump=True)
 
-    for _ in range(3):
-        canvas = FakeCanvas()
+    canvases = [FakeCanvas() for _ in range(3)]
+    for canvas in canvases:
         renderer.draw(canvas, snapshot, dt_ms=16, pending_motions={Position(0, 0): stuck_motion})
 
-    assert canvas.draws[0][1] != "jump"
+    assert canvases[-1].draws[0][1] != "jump"
 
 
 def test_completed_motion_carries_the_animator_to_its_destination_instead_of_resetting_it():

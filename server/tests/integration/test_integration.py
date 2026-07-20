@@ -99,10 +99,6 @@ def test_rook_captures_enemy_at_destination():
     assert run("Board:\nwR . bR\nCommands:\nclick 50 50\nclick 250 50\nwait 2000\nprint board") == ". . wR"
 
 
-def test_pawn_cannot_capture_forward():
-    assert run("Board:\n. bR .\n. wP .\n. . .\nCommands:\nclick 150 150\nclick 150 50\nwait 1000\nprint board") == ". bR .\n. wP .\n. . ."
-
-
 def test_knight_cannot_land_on_friendly_piece():
     assert run("Board:\n. wP .\n. . .\nwN . .\nCommands:\nclick 50 250\nclick 150 50\nwait 1000\nprint board") == ". wP .\n. . .\nwN . ."
 

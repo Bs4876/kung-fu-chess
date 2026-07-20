@@ -3,6 +3,7 @@ so it's independently testable without cv2/Img (see protocols.SpriteSource)."""
 
 from animation.motion_predictor import interpolate_pixel
 from animation.piece_animator import PieceAnimator
+from graphics.protocols import PendingMotionLike
 from model.board import EMPTY
 from model.position import Position
 
@@ -21,7 +22,7 @@ class PieceRenderer:
         self._sprites = sprite_source
         self._cell_size = cell_size
         self._animators: dict[Position, PieceAnimator] = {}
-        self._previous_motions: dict[Position, object] = {}
+        self._previous_motions: dict[Position, PendingMotionLike] = {}
 
     def draw(self, canvas, snapshot, dt_ms: int, pending_motions: dict | None = None) -> None:
         """Draw every piece's current animation frame onto canvas, in place."""

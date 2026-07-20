@@ -48,12 +48,14 @@ def encode(message: dict) -> str:
     return json.dumps({"schema_version": SCHEMA_VERSION, **message})
 
 
-def decode(text: str) -> dict:
+def decode(text: str | bytes) -> dict:
     """Parse a wire message back into a dict.
 
     Raises ValueError on malformed JSON or a payload with no 'type' field -
     callers are expected to turn that into an `error` response rather than
-    let it propagate as an unhandled exception.
+    let it propagate as an unhandled exception. Accepts bytes too since
+    `json.loads` does and a `websockets` connection can in principle
+    deliver a binary frame, even though this protocol only ever sends text.
     """
     message = json.loads(text)
     if not isinstance(message, dict) or "type" not in message:
@@ -85,7 +87,9 @@ def snapshot_to_wire(snapshot) -> dict:
     return {"rows": snapshot.rows, "cols": snapshot.cols, "board": board}
 
 
-def game_start(game_id: str, color: str, state_version: int, snapshot) -> dict:
+def game_start(game_id: str, color: str | None, state_version: int, snapshot) -> dict:
+    """color is None for a viewer's catch-up snapshot (see net/ws_server.py's
+    _watch) - never for a seated player."""
     return {
         "type": GAME_START,
         "game_id": game_id,

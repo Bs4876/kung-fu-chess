@@ -25,6 +25,7 @@ class UsersRepository:
             (username, DEFAULT_ELO),
         )
         self._connection.commit()
+        assert cursor.lastrowid is not None  # always set right after an INSERT
         return User(id=cursor.lastrowid, username=username, elo=DEFAULT_ELO)
 
     def get_by_username(self, username: str) -> User | None:

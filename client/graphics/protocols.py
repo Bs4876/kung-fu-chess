@@ -10,7 +10,22 @@ extraPaths), so they're statically checked, not just documentation.
 from typing import Protocol
 
 from graphics.sprite_loader import StateConfig
+from model.position import Position
 from vendor.img import Img
+
+
+class PendingMotionLike(Protocol):
+    """Matches state.motion_tracker.PendingMotion's public surface -
+    PieceRenderer depends on this instead of the concrete class, same reason
+    as SpriteSource/Renderer below."""
+
+    source: Position
+    destination: Position
+    token: str
+    is_jump: bool
+
+    @property
+    def progress(self) -> float: ...
 
 
 class SpriteSource(Protocol):
