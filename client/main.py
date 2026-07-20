@@ -3,11 +3,8 @@ import server_bridge  # noqa: F401  (must run before any server-rooted import be
 import dialogs
 import ui_config
 from animation.animation_clock import Clock
-from chess_io.board_parser import BoardParser
 from config import WS_HOST, WS_PORT
-from engine.game_engine import GameEngine
 from graphics.window import Window
-from model.starting_position import STARTING_POSITION
 from net import protocol
 from network.network_game_facade import MatchmakingError, NetworkGameFacade, wait_for_game_start
 from network.ws_client import WsClient
@@ -16,18 +13,8 @@ from screens.game_screen import GameScreen
 from screens.home_screen import HomeScreen
 from screens.screen_manager import ScreenManager
 from shell_login import prompt_login
-from state.game_facade import GameFacade
 
 _SERVER_URI = f"ws://{WS_HOST}:{WS_PORT}"
-
-
-def build_local_game_screen() -> GameScreen:
-    """Local hot-seat mode: two people sharing one board/mouse, wired to a
-    real in-process GameEngine - no server needed. Not reachable from the
-    home screen (Play/Rooms always go over the network now), but kept
-    available for offline dev/testing without a running ws_server.py."""
-    board = BoardParser().parse(STARTING_POSITION)
-    return GameScreen(GameFacade(GameEngine(board)))
 
 
 def main() -> None:
