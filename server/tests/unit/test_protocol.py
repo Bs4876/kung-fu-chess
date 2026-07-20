@@ -34,6 +34,29 @@ def test_position_round_trips_through_wire_dict():
     assert protocol.position_from_wire(protocol.position_to_wire(pos)) == pos
 
 
+@pytest.mark.parametrize("bad_row", [-1, 1.5, "0", None, True, False])
+def test_position_from_wire_rejects_a_non_negative_int_row(bad_row):
+    with pytest.raises(ValueError):
+        protocol.position_from_wire({"row": bad_row, "col": 0})
+
+
+@pytest.mark.parametrize("bad_col", [-1, 1.5, "0", None, True, False])
+def test_position_from_wire_rejects_a_non_negative_int_col(bad_col):
+    with pytest.raises(ValueError):
+        protocol.position_from_wire({"row": 0, "col": bad_col})
+
+
+def test_position_from_wire_rejects_a_missing_row_or_col():
+    with pytest.raises(ValueError):
+        protocol.position_from_wire({"col": 0})
+    with pytest.raises(ValueError):
+        protocol.position_from_wire({"row": 0})
+
+
+def test_position_from_wire_accepts_zero():
+    assert protocol.position_from_wire({"row": 0, "col": 0}) == Position(0, 0)
+
+
 def test_snapshot_to_wire_includes_board_rows():
     board = Board([["wR", "."], [".", "bK"]])
     snapshot = GameSnapshot(board, game_over=False)

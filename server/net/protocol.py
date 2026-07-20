@@ -62,7 +62,16 @@ def decode(text: str) -> dict:
 
 
 def position_from_wire(data: dict) -> Position:
-    return Position(data["row"], data["col"])
+    """Raises ValueError if row/col are missing, not plain ints, or negative -
+    callers are expected to turn that into an `error` response the same way
+    decode()'s own ValueError already is (see net/ws_server.py's dispatch),
+    rather than let some unrelated downstream TypeError/IndexError (e.g. list
+    indexing with a float, or a huge int) be what actually catches it."""
+    row, col = data.get("row"), data.get("col")
+    for value in (row, col):
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            raise ValueError(f"invalid board position: {data!r}")
+    return Position(row, col)
 
 
 def position_to_wire(pos: Position) -> dict:
