@@ -68,9 +68,10 @@ def position_from_wire(data: dict) -> Position:
     rather than let some unrelated downstream TypeError/IndexError (e.g. list
     indexing with a float, or a huge int) be what actually catches it."""
     row, col = data.get("row"), data.get("col")
-    for value in (row, col):
-        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
-            raise ValueError(f"invalid board position: {data!r}")
+    if not isinstance(row, int) or isinstance(row, bool) or row < 0:
+        raise ValueError(f"invalid board position: {data!r}")
+    if not isinstance(col, int) or isinstance(col, bool) or col < 0:
+        raise ValueError(f"invalid board position: {data!r}")
     return Position(row, col)
 
 
