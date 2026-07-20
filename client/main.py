@@ -75,6 +75,10 @@ def main() -> None:
             else:
                 client.send(protocol.join_room(text))
                 start = client.recv_one_blocking()
+                if start["type"] != protocol.ERROR:
+                    # Per spec: "the room ID is again written on the top of
+                    # the screen" on Join too, not just on Create.
+                    dialogs.show_info("Joined room", f"Room ID: {text}")
 
             if start is None:
                 show_home()
