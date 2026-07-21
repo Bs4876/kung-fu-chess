@@ -74,24 +74,23 @@ SOUND_GAME_OVER = SOUNDS_DIR / "game_over.wav"
 SOUND_ILLEGAL_MOVE = SOUNDS_DIR / "illegal_move.wav"
 
 # ui_widgets/button.py - the only clickable widget the course's Img-only
-# graphics rule leaves room for: a labeled, pixel-drawn rectangle.
-BUTTON_BG_COLOR = (90, 70, 40, 255)      # BGRA warm brown
-BUTTON_TEXT_COLOR = (255, 255, 255, 255)  # BGRA white
+# graphics rule leaves room for: a labeled, pixel-drawn rectangle. Only used
+# by screens/home_screen.py's Play/Rooms buttons.
+BUTTON_BG_COLOR = (35, 65, 110, 255)      # BGRA warm brown (board's dark-square tone)
+BUTTON_TEXT_COLOR = (150, 205, 222, 255)  # BGRA warm cream, matches HOME_SCREEN_TITLE_COLOR
 BUTTON_FONT_SIZE = 0.8
 BUTTON_LABEL_PADDING_PX = 16
 
-# screens/home_screen.py
+# screens/home_screen.py - same dark-brown/cream wood palette as the board
+# itself (assets/board.png) and the in-game panels, no imagery, plain shapes.
 HOME_SCREEN_WIDTH = 900
 HOME_SCREEN_HEIGHT = 700
-HOME_SCREEN_BG_COLOR = (60, 45, 30, 255)      # BGRA dark warm brown
-HOME_SCREEN_TITLE_COLOR = (230, 225, 215, 255)  # BGRA off-white
-HOME_SCREEN_TITLE_FONT_SIZE = 1.2
-HOME_SCREEN_PIECE_SIZE = 150               # the flanking white/black king sprites
-HOME_SCREEN_PIECE_MARGIN_PX = 60           # from the screen's left/right edge
-HOME_SCREEN_PIECE_TOP_PX = 40
-HOME_SCREEN_PIECE_BACKDROP_PADDING_PX = 18  # how far the circle extends past the sprite
-HOME_SCREEN_PIECE_NAME_FONT_SIZE = 0.65    # the white_name/black_name caption under each king
-HOME_SCREEN_PIECE_NAME_GAP_PX = 24         # from the bottom of the circle to the caption's baseline
-HOME_SCREEN_WHITE_BACKDROP_COLOR = (235, 230, 220, 255)  # BGRA off-white
-HOME_SCREEN_BLACK_BACKDROP_COLOR = (35, 25, 15, 255)     # BGRA near-black warm brown
+HOME_SCREEN_BG_COLOR = (22, 34, 52, 255)        # BGRA near-black walnut brown
+HOME_SCREEN_PANEL_COLOR = (38, 56, 82, 255)     # BGRA lighter brown card behind the buttons
+HOME_SCREEN_PANEL_BORDER_COLOR = (70, 130, 190, 255)  # BGRA cream-tan border, echoes the board's light squares
+HOME_SCREEN_TITLE_COLOR = (150, 205, 222, 255)  # BGRA warm cream (board's light-square tone)
+HOME_SCREEN_TITLE_FONT_SIZE = 1.4
+HOME_SCREEN_SUBTITLE_COLOR = (120, 165, 185, 255)  # BGRA muted cream
+HOME_SCREEN_SUBTITLE_FONT_SIZE = 0.7
+HOME_SCREEN_DIVIDER_COLOR = (70, 130, 190, 255)    # BGRA cream-tan accent line
 HOME_SCREEN_STATUS_COLOR = (120, 140, 230, 255)  # BGRA soft red
