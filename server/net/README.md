@@ -34,11 +34,15 @@ interrupted. `client/main.py` connects to this address by default.
 - **`net/matchmaking.py`** / **`net/room_registry.py`** - the two ways a
   game actually gets created: automatic ELO-range pairing (giving up with an
   error if no human is found within a wait), or a manually created/joined
-  room. Both terminate in an identical `GameRoom`, built from the same
-  injected factory.
-- **`persistence/`** - SQLite-backed accounts (username/password, hashed
-  with PBKDF2-HMAC-SHA256) and ELO rating updates, reacting to the bus
-  rather than being called directly by `GameRoom`.
+  room, identified by a short human-typeable code (e.g. `7K4RN`) rather than
+  a raw uuid. Both terminate in an identical `GameRoom`, built from the same
+  injected factory. A room only ever seats two *players* - anyone who joins
+  after that (same code, same `join_room` message) is seated as a read-only
+  viewer instead (`GameRoom.add_viewer`).
+- **`persistence/`** - SQLite-backed accounts (username + ELO only, no
+  password - "just for presentation", per the course spec: the same username
+  always logs into the same account) and ELO rating updates, reacting to the
+  bus rather than being called directly by `GameRoom`.
 - **`net/ws_server.py`** - wires all of the above to real WebSocket
   connections and is the only place that touches `websockets` directly.
 

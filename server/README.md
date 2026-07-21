@@ -36,6 +36,29 @@ Beyond a single move at a time, this project also supports:
 - **Cooldown after arrival:** a piece must rest for `COOLDOWN_MS` after landing
   (from a move or a jump) before it can be commanded again.
 
+## Playing over a real network
+
+`server/main.py`'s stdin/stdout CLI above is one entrypoint into the same
+engine; `net/ws_server.py` is a second, independent one - a real WebSocket
+server letting two separate client processes play each other, with:
+
+- **Passwordless login** ("just for presentation") + **ELO rating**,
+  persisted in SQLite (`persistence/`) and updated automatically when a game
+  between two logged-in users ends.
+- **Matchmaking** (`net/matchmaking.py`) - automatic pairing within an ELO
+  range - and **manual rooms** (`net/room_registry.py`) - create/join by a
+  short human-typeable code, with anyone joining after the first two seated
+  as a read-only viewer.
+- **Disconnect/reconnect handling** - a dropped connection's seat is held for
+  a grace period before forfeiting, and rejoining within that window resumes
+  the same game.
+- A durable, replayable **event log** of everything that happens, on both
+  server and client (`persistence/event_log.py`).
+
+See [`net/README.md`](net/README.md) for how it's wired together, and
+[`../client/README.md`](../client/README.md) for the graphical client that
+actually plays over this.
+
 ## Installation
 ```bash
 python -m venv .venv
@@ -50,13 +73,23 @@ pip install -r requirements.txt
 > ```
 
 ## Usage
-Run the project from this `server/` directory:
+Run from this `server/` directory. The text-only CLI reads a board
+definition + command script from standard input:
 
 ```bash
 python main.py < input.txt
 ```
 
-The program reads the board definition and commands from standard input.
+The real multiplayer server (see "Playing over a real network" above) is a
+separate entrypoint and stays running until interrupted:
+
+```bash
+python -m net.ws_server
+```
+
+(Run it as a module, not `python net/ws_server.py` directly - the latter
+puts `net/` itself on `sys.path` instead of `server/`, so `net/`'s own
+sibling packages like `bus`/`persistence` fail to import.)
 
 ## Testing
 Run the full unit test suite with coverage:
