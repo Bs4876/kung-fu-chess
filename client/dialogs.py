@@ -69,6 +69,39 @@ def show_info(title: str, message: str) -> None:
     root.destroy()
 
 
+def wait_for_match(client) -> dict | None:
+    """A "searching for opponent" dialog with a Cancel button - polls
+    client.recv_all() on a timer instead of blocking, so clicking Play never
+    freezes the window while the server looks for a human within elo range
+    (up to config.MATCHMAKING_WAIT_MS). Mirrors wait_for_room_match below.
+    Returns the game_start/error message once one arrives, or None if the
+    user cancelled - which also tells the server to stop matchmaking this
+    connection (protocol.cancel_matchmaking)."""
+    result: dict = {"message": None}
+    root = tk.Tk()
+    root.title("Play")
+    tk.Label(root, text="Searching for an opponent...").pack(padx=20, pady=20)
+
+    def cancel() -> None:
+        client.send(protocol.cancel_matchmaking())
+        root.destroy()
+
+    tk.Button(root, text="Cancel", command=cancel).pack(pady=(0, 10))
+    root.protocol("WM_DELETE_WINDOW", cancel)
+
+    def poll() -> None:
+        for message in client.recv_all():
+            if message["type"] in (protocol.GAME_START, protocol.ERROR):
+                result["message"] = message
+                root.destroy()
+                return
+        root.after(_POLL_INTERVAL_MS, poll)
+
+    root.after(_POLL_INTERVAL_MS, poll)
+    root.mainloop()
+    return result["message"]
+
+
 def wait_for_room_match(client, room_id: str) -> dict | None:
     """A small "waiting for opponent" dialog with a Cancel button - polls
     client.recv_all() on a timer instead of blocking, so the dialog stays

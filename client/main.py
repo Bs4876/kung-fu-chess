@@ -6,7 +6,7 @@ from animation.animation_clock import Clock
 from config import WS_HOST, WS_PORT
 from graphics.window import Window
 from net import protocol
-from network.network_game_facade import MatchmakingError, NetworkGameFacade, wait_for_game_start
+from network.network_game_facade import NetworkGameFacade
 from network.ws_client import WsClient
 from persistence.event_log import EventLogWriter
 from screens.game_screen import GameScreen
@@ -36,22 +36,31 @@ def main() -> None:
         screen_manager.show(build_home_screen(username, elo, status=status))
 
     def show_game(start: dict) -> None:
-        screen_manager.show(GameScreen(NetworkGameFacade(client, start, event_logger=client_log_writer)))
+        white_name = f"White - {start['white_name']}" if start.get("white_name") else "White"
+        black_name = f"Black - {start['black_name']}" if start.get("black_name") else "Black"
+        screen_manager.show(GameScreen(
+            NetworkGameFacade(client, start, event_logger=client_log_writer),
+            white_name=white_name, black_name=black_name,
+        ))
 
     def build_home_screen(username: str, elo: int, status: str = "") -> HomeScreen:
         def on_play() -> None:
             # Play requires having already logged in on this same connection
-            # (see net/ws_server.py) - matchmaking then blocks this thread
-            # until it finds a human within range or, failing that, the
-            # server gives up (see net/matchmaking.py); there's no
-            # "searching..." UI state for Play yet, so this just waits.
+            # (see net/ws_server.py). Matchmaking can take up to
+            # config.MATCHMAKING_WAIT_MS looking for a human within range, so
+            # this polls via a "Searching..." dialog (dialogs.wait_for_match)
+            # instead of blocking the render thread - a hard block here used
+            # to make the whole window look frozen/"Not Responding" for the
+            # entire wait.
             client.send(protocol.play())
-            try:
-                start = wait_for_game_start(client)
-            except MatchmakingError as exc:
+            start = dialogs.wait_for_match(client)
+            if start is None:
+                show_home()
+                return
+            if start["type"] == protocol.ERROR:
                 # "pops up a message that can't find" - a real native popup,
                 # not inline screen text.
-                dialogs.show_info("Matchmaking", exc.message)
+                dialogs.show_info("Matchmaking", start["message"])
                 show_home()
                 return
             show_game(start)

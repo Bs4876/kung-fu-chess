@@ -176,6 +176,13 @@ class GameRoom:
                 return color
         return None
 
+    def player_name(self, color: str) -> str | None:
+        """The username seated in color, or None if that seat is empty or
+        holds an anonymous player - used to tell each client who it's
+        actually playing against (see net/ws_server.py's enter_room)."""
+        seated = self._players.get(color)
+        return seated.username if isinstance(seated, _HasUsername) else None
+
     def color_of_player(self, player: object | None) -> str | None:
         """Which color, if any, player was seated as - used to resolve a
         rejoin_game request back to a color. Matched by username rather than

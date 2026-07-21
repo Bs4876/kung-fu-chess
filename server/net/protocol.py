@@ -87,15 +87,22 @@ def snapshot_to_wire(snapshot) -> dict:
     return {"rows": snapshot.rows, "cols": snapshot.cols, "board": board}
 
 
-def game_start(game_id: str, color: str | None, state_version: int, snapshot) -> dict:
+def game_start(
+    game_id: str, color: str | None, state_version: int, snapshot,
+    white_name: str | None = None, black_name: str | None = None,
+) -> dict:
     """color is None for a viewer's catch-up snapshot (see net/ws_server.py's
-    _watch) - never for a seated player."""
+    _watch) - never for a seated player. white_name/black_name are the
+    seated players' usernames (None if that seat is anonymous/unseated) so
+    a client can show who it's actually playing against."""
     return {
         "type": GAME_START,
         "game_id": game_id,
         "color": color,
         "state_version": state_version,
         "snapshot": snapshot_to_wire(snapshot),
+        "white_name": white_name,
+        "black_name": black_name,
     }
 
 

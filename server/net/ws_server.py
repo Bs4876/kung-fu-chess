@@ -102,7 +102,10 @@ class ConnectionHandler:
         # before calling this - color is only ever None for the (separate)
         # viewer path in _watch, never here.
         assert color is not None
-        await self.send(protocol.game_start(game_room.game_id, color, game_room.state_version, game_room.snapshot()))
+        await self.send(protocol.game_start(
+            game_room.game_id, color, game_room.state_version, game_room.snapshot(),
+            white_name=game_room.player_name("white"), black_name=game_room.player_name("black"),
+        ))
 
     async def start_matchmaking(self) -> None:
         if not await self.require_authenticated():
@@ -135,7 +138,10 @@ class ConnectionHandler:
         self._viewing_room = game_room
         # color=None marks this as a viewer's catch-up snapshot rather than
         # a seated player's game_start.
-        await self.send(protocol.game_start(game_room.game_id, None, game_room.state_version, game_room.snapshot()))
+        await self.send(protocol.game_start(
+            game_room.game_id, None, game_room.state_version, game_room.snapshot(),
+            white_name=game_room.player_name("white"), black_name=game_room.player_name("black"),
+        ))
 
     async def join_room(self, message: dict) -> None:
         if not await self.require_authenticated():
