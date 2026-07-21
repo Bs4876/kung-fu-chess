@@ -39,8 +39,11 @@ async def _play_and_match(white_ws, black_ws) -> tuple[dict, dict]:
     await black_ws.send(protocol.encode(protocol.play()))
     assert protocol.decode(await white_ws.recv())["type"] == protocol.MATCHMAKING_STATUS
     assert protocol.decode(await black_ws.recv())["type"] == protocol.MATCHMAKING_STATUS
-    white_start = protocol.decode(await asyncio.wait_for(white_ws.recv(), timeout=3))
-    black_start = protocol.decode(await asyncio.wait_for(black_ws.recv(), timeout=3))
+    # Matchmaking only rescans the waiting queue every config.MATCHMAKING_TICK_MS
+    # (3000ms) - comfortably clear that, rather than race it, per this file's
+    # own module docstring's "real (short-ish) config defaults" approach.
+    white_start = protocol.decode(await asyncio.wait_for(white_ws.recv(), timeout=5))
+    black_start = protocol.decode(await asyncio.wait_for(black_ws.recv(), timeout=5))
     assert white_start["type"] == protocol.GAME_START
     return white_start, black_start
 
