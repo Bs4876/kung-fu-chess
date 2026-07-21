@@ -32,7 +32,10 @@ class GameScreen:
         self._facade = facade
         snapshot = facade.snapshot()
         self._mapper = BoardMapper(snapshot.rows, snapshot.cols, CELL_SIZE)
-        self._controller = Controller(facade, self._mapper)
+        # own_color restricts selection to the seated player's own pieces for
+        # a networked game (facade.color) - local hot-seat's GameFacade has
+        # no such attribute, so both colors stay selectable there.
+        self._controller = Controller(facade, self._mapper, own_color=getattr(facade, "color", None))
         self._last_snapshot = snapshot
         self._last_dt_ms = 0
 

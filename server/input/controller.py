@@ -3,9 +3,15 @@ from model.board import EMPTY
 
 
 class Controller:
-    def __init__(self, engine, board_mapper: BoardMapper):
+    def __init__(self, engine, board_mapper: BoardMapper, own_color: str | None = None):
+        """own_color: "white"/"black" restricts which pieces click() will
+        ever select to that color - e.g. a networked client seated as white
+        should never be able to select (only capture) a black piece. None
+        (the default) leaves selection unrestricted, for local hot-seat play
+        where one input controls both colors."""
         self._engine = engine
         self._mapper = board_mapper
+        self._own_color = own_color
         self._selected = None
 
     @property
@@ -31,7 +37,7 @@ class Controller:
         snap = self._engine.snapshot()
 
         if self._selected is None:
-            if snap.get_piece(pos) != EMPTY:
+            if self._is_selectable(snap.get_piece(pos)):
                 self._selected = pos
         else:
             selected_token = snap.get_piece(self._selected)
@@ -41,3 +47,8 @@ class Controller:
             else:
                 self._engine.request_move(self._selected, pos)
                 self._selected = None
+
+    def _is_selectable(self, token: str) -> bool:
+        if token == EMPTY:
+            return False
+        return self._own_color is None or token[0] == self._own_color[0]

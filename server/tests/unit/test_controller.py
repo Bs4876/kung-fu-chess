@@ -6,7 +6,7 @@ from input.controller import Controller
 from engine.game_engine import GameSnapshot
 
 
-def setup(rows=("wR . .",)):
+def setup(rows=("wR . .",), own_color=None):
     board = Board([[c for c in row.split()] for row in rows])
     engine = MagicMock()
     pieces = {}
@@ -18,7 +18,7 @@ def setup(rows=("wR . .",)):
         board=Board([[c for c in row.split()] for row in rows]), game_over=False
     )
     mapper = BoardMapper(rows=board.rows, cols=board.cols)
-    controller = Controller(engine, mapper)
+    controller = Controller(engine, mapper, own_color=own_color)
     return controller, engine, board
 
 
@@ -96,3 +96,24 @@ def test_deselect_clears_the_selection():
     assert ctrl.selected is None
     ctrl.click(250, 50)  # would move if still selected from (0, 0)
     engine.request_move.assert_not_called()
+
+
+def test_own_color_blocks_selecting_an_enemy_piece():
+    ctrl, engine, _ = setup(rows=("wR . bK",), own_color="white")
+    ctrl.click(250, 50)  # click the black king
+    assert ctrl.selected is None
+    ctrl.click(150, 50)  # would send a move if the king had been selected
+    engine.request_move.assert_not_called()
+
+
+def test_own_color_still_allows_capturing_an_enemy_piece_as_a_move_destination():
+    ctrl, engine, _ = setup(rows=("wR . bK",), own_color="white")
+    ctrl.click(50, 50)   # select own rook
+    ctrl.click(250, 50)  # capture the enemy king
+    engine.request_move.assert_called_once_with(Position(0, 0), Position(0, 2))
+
+
+def test_own_color_none_allows_selecting_either_color_for_hot_seat_play():
+    ctrl, engine, _ = setup(rows=("wR . bK",), own_color=None)
+    ctrl.click(250, 50)  # select the black king
+    assert ctrl.selected == Position(0, 2)
