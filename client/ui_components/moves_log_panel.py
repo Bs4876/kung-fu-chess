@@ -21,22 +21,26 @@ def _format_time(ms: int) -> str:
 
 
 class MovesLogPanel:
-    """Keeps two separate move histories: one per side."""
+    """Keeps two separate move histories: one per side, each a list of
+    (time, move) rows for a two-column table display."""
 
     def __init__(self):
-        self._white_lines: list[str] = []
-        self._black_lines: list[str] = []
+        self._white_rows: list[tuple[str, str]] = []
+        self._black_rows: list[tuple[str, str]] = []
 
     def handle_event(self, event) -> None:
         if isinstance(event, MoveAccepted):
-            line = f"{event.token[1]} {_cell_name(event.source)}-{_cell_name(event.destination)} [{_format_time(event.timestamp_ms)}]"
+            row = (
+                _format_time(event.timestamp_ms),
+                f"{event.token[1]} {_cell_name(event.source)}-{_cell_name(event.destination)}",
+            )
             if event.token[0] == "w":
-                self._white_lines.append(line)
+                self._white_rows.append(row)
             else:
-                self._black_lines.append(line)
+                self._black_rows.append(row)
 
-    def white_lines(self) -> list[str]:
-        return list(reversed(self._white_lines[-MOVES_LOG_MAX_VISIBLE_LINES:]))
+    def white_lines(self) -> list[tuple[str, str]]:
+        return list(reversed(self._white_rows[-MOVES_LOG_MAX_VISIBLE_LINES:]))
 
-    def black_lines(self) -> list[str]:
-        return list(reversed(self._black_lines[-MOVES_LOG_MAX_VISIBLE_LINES:]))
+    def black_lines(self) -> list[tuple[str, str]]:
+        return list(reversed(self._black_rows[-MOVES_LOG_MAX_VISIBLE_LINES:]))

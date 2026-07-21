@@ -58,6 +58,10 @@ HALT_FLASH_DURATION_MS = 600
 MOVES_LOG_MAX_VISIBLE_LINES = 20
 BOARD_ROWS = 8  # for converting a row index to algebraic rank notation (row 7 = rank 1)
 
+# graphics/hud_renderer.py's Time/Move table for the moves log.
+HUD_MOVES_HEADER_TO_ROWS_GAP_PX = 22  # header baseline to the divider under it
+HUD_MOVES_TIME_COL_WIDTH_PX = 58      # time column width before the move column starts
+
 # graphics/window.py
 WINDOW_ESC_KEY = 27
 

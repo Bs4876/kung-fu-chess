@@ -42,7 +42,7 @@ class HudRenderer:
         )
         return scene
 
-    def _draw_side_panel(self, scene, name: str, score: int, lines: list,
+    def _draw_side_panel(self, scene, name: str, score: int, rows: list,
                          x: int, board_height: int) -> None:
         pad = ui_config.HUD_LEFT_PADDING_PX
         panel_right = x - pad + self._panel_width - pad
@@ -61,9 +61,16 @@ class HudRenderer:
         scene.img[y:y+1, x:panel_right] = div_color
 
         y += ui_config.HUD_SCORE_TO_MOVES_GAP_PX - ui_config.HUD_SCORE_TO_DIVIDER_GAP_PX
-        for line in lines:
+        move_col_x = x + ui_config.HUD_MOVES_TIME_COL_WIDTH_PX
+        scene.put_text("Time", x, y, ui_config.HUD_LINE_FONT_SIZE, color=ui_config.HUD_TEXT_COLOR)
+        scene.put_text("Move", move_col_x, y, ui_config.HUD_LINE_FONT_SIZE, color=ui_config.HUD_TEXT_COLOR)
+
+        y += ui_config.HUD_MOVES_HEADER_TO_ROWS_GAP_PX
+        scene.img[y:y+1, x:panel_right] = div_color
+
+        for time_str, move_str in rows:
             y += ui_config.HUD_LINE_HEIGHT_PX
             if y >= board_height - ui_config.HUD_LINE_HEIGHT_PX:
                 break
-            scene.put_text(line, x, y, ui_config.HUD_LINE_FONT_SIZE,
-                           color=ui_config.HUD_TEXT_COLOR)
+            scene.put_text(time_str, x, y, ui_config.HUD_LINE_FONT_SIZE, color=ui_config.HUD_TEXT_COLOR)
+            scene.put_text(move_str, move_col_x, y, ui_config.HUD_LINE_FONT_SIZE, color=ui_config.HUD_TEXT_COLOR)

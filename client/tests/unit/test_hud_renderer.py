@@ -94,21 +94,21 @@ def test_scores_are_drawn_for_each_side():
 def test_moves_log_lines_are_drawn_for_each_side_in_order():
     hud = build()
     board = FakeBoardCanvas(width=300)
-    log = FakeMovesLogPanel(white_lines=["e2-e4"], black_lines=["e7-e5", "d7-d5"])
+    log = FakeMovesLogPanel(white_lines=[("0.1s", "e2-e4")], black_lines=[("0.2s", "e7-e5"), ("0.3s", "d7-d5")])
     scene = hud.compose(board, log, FakeScorePanel(), FakePlayerLabels())
-    reserved = {"Alice", "Bob", "Score: 0"}
+    reserved = {"Alice", "Bob", "Score: 0", "Time", "Move"}
     line_texts = [t[0] for t in scene.texts if t[0] not in reserved]
-    assert line_texts == ["e2-e4", "e7-e5", "d7-d5"]
+    assert line_texts == ["0.1s", "e2-e4", "0.2s", "e7-e5", "0.3s", "d7-d5"]
 
 
 def test_moves_log_lines_stop_before_running_off_the_bottom_of_the_board():
     hud = build()
     board = FakeBoardCanvas(width=300, height=200)
-    many_lines = [f"move{i}" for i in range(20)]
-    log = FakeMovesLogPanel(white_lines=many_lines)
+    many_rows = [(f"{i}.0s", f"move{i}") for i in range(20)]
+    log = FakeMovesLogPanel(white_lines=many_rows)
     scene = hud.compose(board, log, FakeScorePanel(), FakePlayerLabels())
     drawn = [t[0] for t in scene.texts if t[0].startswith("move")]
-    assert drawn == many_lines[:3]
+    assert drawn == [row[1] for row in many_rows[:2]]
 
 
 def test_both_side_panels_get_the_background_fill_and_the_board_area_does_not():
