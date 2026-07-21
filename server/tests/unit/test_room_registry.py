@@ -110,6 +110,35 @@ async def test_room_ids_are_unique_across_creations():
     assert first != second
 
 
+async def test_room_id_is_a_short_human_typeable_code():
+    registry, _rooms = registry_for()
+    room_id = registry.create_room("Alice's room", FakeSocket(), FakeUser("alice"))
+    assert len(room_id) == 5
+    assert room_id.isupper()
+    assert not set(room_id) & set("0OIL1")  # excluded as visually ambiguous
+
+
+async def test_join_room_accepts_a_lowercase_or_untrimmed_room_id():
+    registry, _rooms = registry_for()
+    room_id = registry.create_room("Alice's room", FakeSocket(), FakeUser("alice"))
+    game_room = registry.join_room(f" {room_id.lower()} ", FakeSocket(), FakeUser("bob"))
+    assert game_room is not None
+
+
+async def test_watch_room_accepts_a_lowercase_room_id():
+    registry, _rooms = registry_for()
+    room_id = registry.create_room("Alice's room", FakeSocket(), FakeUser("alice"))
+    game_room = registry.join_room(room_id, FakeSocket(), FakeUser("bob"))
+    assert registry.watch_room(room_id.lower()) is game_room
+
+
+async def test_cancel_room_accepts_a_lowercase_room_id():
+    registry, _rooms = registry_for()
+    creator_socket = FakeSocket()
+    room_id = registry.create_room("Alice's room", creator_socket, FakeUser("alice"))
+    assert registry.cancel_room(room_id.lower(), creator_socket) is True
+
+
 async def test_watch_room_returns_the_running_game_room():
     registry, rooms = registry_for()
     room_id = registry.create_room("Alice's room", FakeSocket(), FakeUser("alice"))

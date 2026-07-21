@@ -12,11 +12,24 @@ two into a room are players, anyone after that is a read-only spectator.
 """
 
 import asyncio
-import uuid
+import secrets
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from net.game_room import GameRoom
+
+# Excludes visually-ambiguous characters (0/O, 1/I/L) so a code is easy to
+# read aloud/type correctly - a full uuid4 hex is unambiguous too, but far
+# longer than anyone wants to type in to join a friend's room.
+_ROOM_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+_ROOM_CODE_LENGTH = 5
+
+
+def _generate_room_code() -> str:
+    """A random 5-character room code drawn from _ROOM_CODE_ALPHABET - not
+    checked for uniqueness here, that's create_room's job (it retries on a
+    collision against the currently live rooms)."""
+    return "".join(secrets.choice(_ROOM_CODE_ALPHABET) for _ in range(_ROOM_CODE_LENGTH))
 
 
 class _PendingRoom:
@@ -49,7 +62,9 @@ class RoomRegistry:
         away - call await_join(room_id) afterward to block until a second
         player joins, the same two-step shape net/ws_server.py already uses
         for matchmaking's play()."""
-        room_id = uuid.uuid4().hex[:8]
+        room_id = _generate_room_code()
+        while room_id in self._pending or room_id in self._running:
+            room_id = _generate_room_code()
         future = asyncio.get_running_loop().create_future()
         self._pending[room_id] = _PendingRoom(room_id, name, websocket, user, future)
         return room_id
@@ -63,6 +78,7 @@ class RoomRegistry:
         (already filled, cancelled, or never existed). The room keeps
         appearing in list_rooms()/being reachable via watch_room afterward,
         now as a running (viewer-joinable) room instead of a pending one."""
+        room_id = room_id.strip().upper()
         pending = self._pending.pop(room_id, None)
         if pending is None:
             return None
@@ -78,12 +94,13 @@ class RoomRegistry:
         exist, hasn't started yet (still pending its second player), or has
         already ended."""
         self._evict_ended_rooms()
-        running = self._running.get(room_id)
+        running = self._running.get(room_id.strip().upper())
         return running.game_room if running is not None else None
 
     def cancel_room(self, room_id: str, websocket) -> bool:
         """Withdraw room_id - only its own creator's websocket may do this.
         Returns whether anything was actually cancelled."""
+        room_id = room_id.strip().upper()
         pending = self._pending.get(room_id)
         if pending is None or pending.websocket is not websocket:
             return False
