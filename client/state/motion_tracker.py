@@ -8,6 +8,19 @@ engine + this tracker + the event stream, instead of also being the one
 holding and mutating the pending-motion dict directly.
 """
 
+# How much longer than a motion's own predicted duration_ms to keep waiting
+# for the real resolving outcome before giving up on it (see
+# MotionTracker._drop_expired). Purely local prediction (progress==1.0 the
+# instant duration_ms elapses) races the *real* NetworkGameFacade outcome,
+# which is always strictly later: the server only resolves arrivals every
+# config.TICK_MS (see server/net/game_room.py's tick loop), plus whatever
+# the round trip back to this client costs. Without this buffer, every
+# ordinary networked move's pending motion got dropped just before its real
+# Arrived outcome landed - the piece would render snapped back to its
+# pre-move snapshot position for a frame, then jump straight to its
+# destination with no animation once the outcome finally arrived.
+_EXPIRY_GRACE_MS = 500
+
 
 def chebyshev_distance(a, b) -> int:
     """Board-square distance (king-move count) between two Positions - both
@@ -44,6 +57,16 @@ class PendingMotion:
             return 1.0
         return min(self.elapsed_ms / self.duration_ms, 1.0)
 
+    @property
+    def overdue(self) -> bool:
+        """True once elapsed time has run past duration_ms by more than
+        _EXPIRY_GRACE_MS - only then do we give up waiting for a real
+        resolving outcome and treat this as silently rejected (see
+        MotionTracker._drop_expired). Until then, progress simply stays
+        clamped at 1.0 (piece drawn resting at its destination) with no
+        visible change once the real outcome does arrive."""
+        return self.elapsed_ms >= self.duration_ms + _EXPIRY_GRACE_MS
+
 
 class MotionTracker:
     """Pure bookkeeping - no Subject/publish or event-translation dependency,
@@ -77,7 +100,7 @@ class MotionTracker:
         predicted destination pixel - drawn as a stuck ghost duplicate of
         whatever piece is actually resting there.
         """
-        expired = [source for source, motion in self._pending.items() if motion.progress >= 1.0]
+        expired = [source for source, motion in self._pending.items() if motion.overdue]
         for source in expired:
             del self._pending[source]
 

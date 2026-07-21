@@ -27,7 +27,20 @@ def test_advance_all_progresses_every_pending_motion():
     assert tracker.pending()[Position(0, 0)].progress == 0.5
 
 
-def test_advance_all_drops_a_motion_never_reconciled_once_its_progress_completes():
+def test_advance_all_keeps_a_motion_pending_a_grace_period_past_its_duration():
+    # progress hits 1.0 right at duration_ms, but the real resolving outcome
+    # (e.g. NetworkGameFacade's Arrived) is always strictly later than a
+    # purely local prediction - see state/motion_tracker.py's _EXPIRY_GRACE_MS
+    # docstring - so a motion must stay pending for a grace window past
+    # duration_ms, not vanish the instant progress completes.
+    tracker = MotionTracker()
+    tracker.start(Position(0, 0), Position(0, 2), "wR", duration_ms=1000, is_jump=True)
+    tracker.advance_all(1000)
+    assert tracker.pending()[Position(0, 0)].progress == 1.0
+    assert Position(0, 0) in tracker.pending()
+
+
+def test_advance_all_drops_a_motion_never_reconciled_once_its_grace_period_completes():
     # e.g. a jump the engine silently rejected: GameFacade starts the pending
     # motion optimistically and it's never resolved, so without expiry it
     # would sit here forever frozen at progress 1.0 - drawn permanently at its
@@ -35,7 +48,7 @@ def test_advance_all_drops_a_motion_never_reconciled_once_its_progress_completes
     # actually there.
     tracker = MotionTracker()
     tracker.start(Position(0, 0), Position(0, 2), "wR", duration_ms=1000, is_jump=True)
-    tracker.advance_all(999)
+    tracker.advance_all(1499)
     assert Position(0, 0) in tracker.pending()
     tracker.advance_all(2)
     assert tracker.pending() == {}
