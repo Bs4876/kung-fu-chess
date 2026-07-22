@@ -11,8 +11,8 @@ from network.ws_client import WsClient
 from persistence.event_log import EventLogWriter
 from screens.game_screen import GameScreen
 from screens.home_screen import HomeScreen
+from screens.login_screen import LoginScreen
 from screens.screen_manager import ScreenManager
-from shell_login import prompt_login
 
 _SERVER_URI = f"ws://{WS_HOST}:{WS_PORT}"
 
@@ -23,16 +23,24 @@ def main() -> None:
     def on_network_event(kind: str, payload: dict) -> None:
         client_log_writer(("network", {"event": kind, **payload}))
 
-    # Login happens in the shell, before any window exists - per the course
-    # spec ("do it in a shell, not via GUI").
     client = WsClient(_SERVER_URI, on_event=on_network_event)
-    username, elo = prompt_login(client)
 
     window = Window(ui_config.WINDOW_TITLE)
     screen_manager = ScreenManager(window)
     clock = Clock()
 
-    def show_home(status: str = "") -> None:
+    def show_login(status: str = "") -> None:
+        def on_submit(username: str) -> None:
+            # handle_login always succeeds (creates the account on first
+            # login, per the "just for presentation" no-password spec) -
+            # no failure branch to handle here.
+            client.send(protocol.login(username))
+            result = client.recv_one_blocking()
+            show_home(result["username"], result["elo"])
+
+        screen_manager.show(LoginScreen(on_submit, status=status))
+
+    def show_home(username: str, elo: int, status: str = "") -> None:
         screen_manager.show(build_home_screen(username, elo, status=status))
 
     def show_game(start: dict) -> None:
@@ -55,20 +63,20 @@ def main() -> None:
             client.send(protocol.play())
             start = dialogs.wait_for_match(client)
             if start is None:
-                show_home()
+                show_home(username, elo)
                 return
             if start["type"] == protocol.ERROR:
                 # "pops up a message that can't find" - a real native popup,
                 # not inline screen text.
                 dialogs.show_info("Matchmaking", start["message"])
-                show_home()
+                show_home(username, elo)
                 return
             show_game(start)
 
         def on_rooms() -> None:
             choice = dialogs.prompt_room_action()
             if choice is None or not choice[1]:
-                show_home()
+                show_home(username, elo)
                 return
             action, text = choice
 
@@ -76,7 +84,7 @@ def main() -> None:
                 client.send(protocol.create_room(text))
                 created = client.recv_one_blocking()
                 if created["type"] == protocol.ERROR:
-                    show_home(status=created["message"])
+                    show_home(username, elo, status=created["message"])
                     return
                 room_id = created["room_id"]
                 dialogs.show_info("Room created", f"Room ID: {room_id}\nShare this with your opponent.")
@@ -90,16 +98,16 @@ def main() -> None:
                     dialogs.show_info("Joined room", f"Room ID: {text}")
 
             if start is None:
-                show_home()
+                show_home(username, elo)
                 return
             if start["type"] == protocol.ERROR:
-                show_home(status=start["message"])
+                show_home(username, elo, status=start["message"])
                 return
             show_game(start)
 
         return HomeScreen(username, elo, on_play, on_rooms, status=status)
 
-    show_home()
+    show_login()
 
     while window.poll():
         window.maintain_aspect_ratio()

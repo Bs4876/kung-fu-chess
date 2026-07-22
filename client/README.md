@@ -20,9 +20,10 @@ Then, from `client/`:
 python main.py
 ```
 
-1. **Login happens in the shell** first, before any window opens (per the
-   course spec - "do it in a shell, not via GUI"): type a username and press
-   Enter. There's no password - the same username always reuses the same
+1. **Login is a real screen** (`screens/login_screen.py`) - the course spec
+   allows either a shell prompt or a GUI for this, and this project uses the
+   GUI: type a username into the on-screen box and press Enter (or click
+   Login). There's no password - the same username always reuses the same
    account (created on first login) and its ELO rating.
 2. The **home screen** opens with two buttons:
    - **Play** - automatic matchmaking within `MATCH_ELO_RANGE` (±100) of your

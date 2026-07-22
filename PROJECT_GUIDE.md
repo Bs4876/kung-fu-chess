@@ -98,9 +98,8 @@ is this same CLI's real entrypoint (reads a board + command script from stdin).
 ### Entry points
 | File | What it is |
 |---|---|
-| `main.py` | The real entrypoint. Shell login → open window → home screen → Play/Rooms over the network → game screen. The render loop itself (`while window.poll(): ...`). |
+| `main.py` | The real entrypoint. Open window → login screen → home screen → Play/Rooms over the network → game screen. The render loop itself (`while window.poll(): ...`). |
 | `server_bridge.py` | Puts `server/` on `sys.path` so the client can import its pure domain modules (`model`, `rules`, `config`, ...) directly. |
-| `shell_login.py` | Console username prompt before any window exists (course spec: login via shell, not GUI). |
 | `dialogs.py` | Real native OS dialogs (tkinter) for Create/Join/Cancel rooms and "no opponent found" popups. |
 
 ### `network/` — the WebSocket client side
@@ -122,6 +121,7 @@ is this same CLI's real entrypoint (reads a board + command script from stdin).
 | File | What it is |
 |---|---|
 | `screen_manager.py` | `ScreenManager` — single-slot screen switcher; forwards each frame's tick/render/mouse/key to whichever screen is current. |
+| `login_screen.py` | Graphical username entry (the GUI half of the course's "shell or GUI" login choice) — a text box with a blinking cursor, driven by `handle_key`, plus a Login button. |
 | `home_screen.py` | Welcome + Play/Rooms buttons. |
 | `game_screen.py` | The actual board view — wires together every renderer and every `ui_components/` tracker via the facade's event subscriptions. Takes whichever facade it's given (local or networked) without caring which. |
 

@@ -74,8 +74,9 @@ SOUND_GAME_OVER = SOUNDS_DIR / "game_over.wav"
 SOUND_ILLEGAL_MOVE = SOUNDS_DIR / "illegal_move.wav"
 
 # ui_widgets/button.py - the only clickable widget the course's Img-only
-# graphics rule leaves room for: a labeled, pixel-drawn rectangle. Only used
-# by screens/home_screen.py's Play/Rooms buttons.
+# graphics rule leaves room for: a labeled, pixel-drawn rectangle. Used by
+# screens/home_screen.py's Play/Rooms buttons and screens/login_screen.py's
+# Login button.
 BUTTON_BG_COLOR = (35, 65, 110, 255)      # BGRA warm brown (board's dark-square tone)
 BUTTON_TEXT_COLOR = (150, 205, 222, 255)  # BGRA warm cream, matches HOME_SCREEN_TITLE_COLOR
 BUTTON_FONT_SIZE = 0.8
@@ -94,3 +95,13 @@ HOME_SCREEN_SUBTITLE_COLOR = (120, 165, 185, 255)  # BGRA muted cream
 HOME_SCREEN_SUBTITLE_FONT_SIZE = 0.7
 HOME_SCREEN_DIVIDER_COLOR = (70, 130, 190, 255)    # BGRA cream-tan accent line
 HOME_SCREEN_STATUS_COLOR = (120, 140, 230, 255)  # BGRA soft red
+
+# screens/login_screen.py - graphical login (the course spec allows either
+# a shell prompt or a GUI for this; this is the GUI option). Shares
+# home_screen.py's size/palette so it reads as the first screen of the
+# same app, not a bolted-on dialog.
+LOGIN_INPUT_WIDTH_PX = 340
+LOGIN_INPUT_HEIGHT_PX = 56
+LOGIN_INPUT_FONT_SIZE = 0.85
+LOGIN_CURSOR_BLINK_MS = 500
+LOGIN_MAX_USERNAME_LENGTH = 20
