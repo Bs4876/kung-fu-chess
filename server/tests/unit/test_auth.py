@@ -1,7 +1,7 @@
 from config import DEFAULT_ELO
-from net import protocol
-from net.auth import handle_login
-from net.session import Session
+import protocol
+from services.auth_service import handle_login
+from gateway.session import Session
 from persistence.db import connect
 from persistence.users_repository import UsersRepository
 

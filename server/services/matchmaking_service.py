@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from config import MATCH_ELO_RANGE, MATCHMAKING_TICK_MS, MATCHMAKING_WAIT_MS
 
 if TYPE_CHECKING:
-    from net.game_room import GameRoom
+    from services.game_service import GameRoom
 
 
 class _Waiting:
@@ -30,11 +30,11 @@ class Matchmaking:
         elo_range: int = MATCH_ELO_RANGE, tick_ms: int = MATCHMAKING_TICK_MS, wait_ms: int = MATCHMAKING_WAIT_MS,
     ):
         """new_room() -> a fresh, started, empty GameRoom - injected so this
-        module never has to import net/game_room.py itself, pure queue/timing
-        logic. clock/elo_range/tick_ms/wait_ms are all injectable so tests
-        can run matchmaking's timing deterministically fast instead of
-        waiting on real wall-clock seconds (see
-        server/tests/unit/test_matchmaking.py)."""
+        module never has to import services/game_service.py itself, pure
+        queue/timing logic. clock/elo_range/tick_ms/wait_ms are all
+        injectable so tests can run matchmaking's timing deterministically
+        fast instead of waiting on real wall-clock seconds (see
+        server/tests/unit/test_matchmaking_service.py)."""
         self._new_room = new_room
         self._clock = clock
         self._elo_range = elo_range

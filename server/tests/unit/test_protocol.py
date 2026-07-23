@@ -6,7 +6,7 @@ from config import SCHEMA_VERSION
 from engine.game_engine import Arrived, GameSnapshot, MoveResult
 from model.board import Board
 from model.position import Position
-from net import protocol
+import protocol
 
 
 def test_encode_stamps_schema_version():

@@ -13,7 +13,7 @@ holding and mutating the pending-motion dict directly.
 # MotionTracker._drop_expired). Purely local prediction (progress==1.0 the
 # instant duration_ms elapses) races the *real* NetworkGameFacade outcome,
 # which is always strictly later: the server only resolves arrivals every
-# config.TICK_MS (see server/net/game_room.py's tick loop), plus whatever
+# config.TICK_MS (see server/services/game_service.py's tick loop), plus whatever
 # the round trip back to this client costs. Without this buffer, every
 # ordinary networked move's pending motion got dropped just before its real
 # Arrived outcome landed - the piece would render snapped back to its

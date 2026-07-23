@@ -39,23 +39,65 @@ Beyond a single move at a time, this project also supports:
 ## Playing over a real network
 
 `server/main.py`'s stdin/stdout CLI above is one entrypoint into the same
-engine; `net/ws_server.py` is a second, independent one - a real WebSocket
-server letting two separate client processes play each other, with:
+engine; `gateway/ws_server.py` is a second, independent one - a real
+WebSocket server letting two separate client processes play each other, with:
 
 - **Passwordless login** ("just for presentation") + **ELO rating**,
   persisted in SQLite (`persistence/`) and updated automatically when a game
   between two logged-in users ends.
-- **Matchmaking** (`net/matchmaking.py`) - automatic pairing within an ELO
-  range - and **manual rooms** (`net/room_registry.py`) - create/join by a
-  short human-typeable code, with anyone joining after the first two seated
-  as a read-only viewer.
+- **Matchmaking** (`services/matchmaking_service.py`) - automatic pairing
+  within an ELO range - and **manual rooms** (`services/room_service.py`) -
+  create/join by a short human-typeable code, with anyone joining after the
+  first two seated as a read-only viewer.
 - **Disconnect/reconnect handling** - a dropped connection's seat is held for
   a grace period before forfeiting, and rejoining within that window resumes
   the same game.
 - A durable, replayable **event log** of everything that happens, on both
   server and client (`persistence/event_log.py`).
 
-See [`net/README.md`](net/README.md) for how it's wired together, and
+### Shape of the networking layer
+
+A small layered stack, each layer only calling the one directly beneath it:
+`gateway/` (owns the real socket) -> `router/` (message_type -> handler) ->
+`handlers/` (message -> service call + response) -> `services/` (business
+logic, socket-agnostic).
+
+- **`bus/event_bus.py`** - a topic-based publish/subscribe bus every other
+  piece here publishes onto (game outcomes under `"game.<id>"`), so
+  cross-cutting concerns (the write-log, ELO updates) can subscribe without
+  the code that publishes needing to know they exist.
+- **`protocol.py`** - the JSON wire envelope and every message shape, in one
+  place. Swapping the encoding (e.g. to msgpack) later is a one-file change
+  here, not a protocol redesign.
+- **`gateway/ws_server.py`** (`Gateway`) - one instance per connection: the
+  read loop, JSON decode, exception containment around dispatch, and cleanup
+  on disconnect. The only module that touches `websockets` directly.
+  **`gateway/connection.py`**/**`gateway/session.py`** hold that connection's
+  mutable state (seated room, logged-in user).
+- **`router/message_router.py`** - a table mapping each message type to its
+  handler; replaces what used to be an if/elif chain in the connection
+  handler itself.
+- **`handlers/`** - one function per client message type
+  (`auth_handler.py`, `matchmaking_handler.py`, `rooms_handler.py`,
+  `gameplay_handler.py`), each thin: decode what the message means, call the
+  right service, send the response.
+- **`services/game_service.py`** (`GameRoom`) - owns one `GameEngine` and
+  ticks it on its own asyncio task, independent of whether either player is
+  currently connected. Also owns the disconnect grace-then-forfeit timer and
+  reconnect handling for that game. **`services/game_registry.py`** tracks
+  every active one by `game_id` so a rejoin can find its way back.
+- **`services/matchmaking_service.py`** / **`services/room_service.py`** -
+  the two ways a game actually gets created: automatic ELO-range pairing
+  (giving up with an error if no human is found within a wait), or a
+  manually created/joined room, identified by a short human-typeable code
+  (e.g. `7K4RN`) rather than a raw uuid. Both terminate in an identical
+  `GameRoom`, built from the same injected factory.
+- **`persistence/`** - SQLite-backed accounts (username + ELO only, no
+  password - "just for presentation", per the course spec: the same username
+  always logs into the same account) and ELO rating updates, reacting to the
+  bus rather than being called directly by `GameRoom`.
+
+See [`../PROJECT_GUIDE.md`](../PROJECT_GUIDE.md) for a file-by-file map, and
 [`../client/README.md`](../client/README.md) for the graphical client that
 actually plays over this.
 
@@ -84,11 +126,11 @@ The real multiplayer server (see "Playing over a real network" above) is a
 separate entrypoint and stays running until interrupted:
 
 ```bash
-python -m net.ws_server
+python -m gateway.ws_server
 ```
 
-(Run it as a module, not `python net/ws_server.py` directly - the latter
-puts `net/` itself on `sys.path` instead of `server/`, so `net/`'s own
+(Run it as a module, not `python gateway/ws_server.py` directly - the latter
+puts `gateway/` itself on `sys.path` instead of `server/`, so `gateway/`'s own
 sibling packages like `bus`/`persistence` fail to import.)
 
 ## Testing

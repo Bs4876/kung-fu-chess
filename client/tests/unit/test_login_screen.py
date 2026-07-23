@@ -1,4 +1,5 @@
 import cv2
+import winsound
 
 import ui_config
 from screens.login_screen import LoginScreen
@@ -17,6 +18,12 @@ def _center_of(button) -> tuple[int, int]:
     return button.x + button.width // 2, button.y + button.height // 2
 
 
+def played_paths(monkeypatch):
+    calls = []
+    monkeypatch.setattr(winsound, "PlaySound", lambda path, flags: calls.append(path))
+    return calls
+
+
 def test_typing_then_enter_submits_the_trimmed_username():
     submitted = []
     screen = screen_for(on_submit=submitted.append)
@@ -32,6 +39,15 @@ def test_typing_then_clicking_login_submits():
     x, y = _center_of(screen._login_button)
     screen.handle_mouse(cv2.EVENT_LBUTTONDOWN, x, y, 0, None)
     assert submitted == ["bob"]
+
+
+def test_clicking_login_plays_the_click_sound(monkeypatch):
+    calls = played_paths(monkeypatch)
+    screen = screen_for()
+    _type(screen, "bob")
+    x, y = _center_of(screen._login_button)
+    screen.handle_mouse(cv2.EVENT_LBUTTONDOWN, x, y, 0, None)
+    assert calls == [str(ui_config.SOUND_CLICK)]
 
 
 def test_enter_with_no_username_typed_does_not_submit():

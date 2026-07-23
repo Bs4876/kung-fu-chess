@@ -1,5 +1,5 @@
 from bus.event_bus import EventBus
-from net.game_room import GameEnded
+from services.game_service import GameEnded
 from persistence.db import connect
 from persistence.elo import update_ratings
 from persistence.elo_updater import EloUpdater

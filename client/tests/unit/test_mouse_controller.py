@@ -1,7 +1,9 @@
 from unittest.mock import MagicMock
 
 import cv2
+import winsound
 
+import ui_config
 from model.position import Position
 from user_input.mouse_controller import MouseController
 
@@ -14,11 +16,39 @@ def build(selected=None):
     return MouseController(controller, facade, mapper), controller, facade, mapper
 
 
+def played_paths(monkeypatch):
+    calls = []
+    monkeypatch.setattr(winsound, "PlaySound", lambda path, flags: calls.append(path))
+    return calls
+
+
 def test_left_click_is_forwarded_to_controller():
     mc, controller, facade, mapper = build()
     mc.handle_event(cv2.EVENT_LBUTTONDOWN, 50, 50, 0, None)
     controller.click.assert_called_once_with(50, 50)
     facade.request_jump.assert_not_called()
+
+
+def test_left_click_plays_the_click_sound(monkeypatch):
+    calls = played_paths(monkeypatch)
+    mc, controller, facade, mapper = build()
+    mc.handle_event(cv2.EVENT_LBUTTONDOWN, 50, 50, 0, None)
+    assert calls == [str(ui_config.SOUND_CLICK)]
+
+
+def test_right_click_plays_the_click_sound(monkeypatch):
+    calls = played_paths(monkeypatch)
+    mc, controller, facade, mapper = build(selected=Position(0, 0))
+    mapper.pixel_to_cell.return_value = Position(0, 2)
+    mc.handle_event(cv2.EVENT_RBUTTONDOWN, 250, 50, 0, None)
+    assert calls == [str(ui_config.SOUND_CLICK)]
+
+
+def test_a_non_click_mouse_event_does_not_play_the_click_sound(monkeypatch):
+    calls = played_paths(monkeypatch)
+    mc, controller, facade, mapper = build()
+    mc.handle_event(cv2.EVENT_MOUSEMOVE, 50, 50, 0, None)
+    assert calls == []
 
 
 def test_right_click_with_no_selection_does_nothing():

@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from model.board import Board, EMPTY
 from model.position import Position
 from rules.rule_engine import RuleEngine
-from realtime.real_time_arbiter import RealTimeArbiter
-from realtime.motion import CollisionEvent
+from engine.real_time_arbiter import RealTimeArbiter
+from engine.motion import CollisionEvent
 from config import MOVE_COOLDOWN_MS, JUMP_COOLDOWN_MS
 from engine.observer import Subject
 

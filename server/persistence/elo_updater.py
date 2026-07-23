@@ -5,7 +5,7 @@ just publishes what happened, this reacts to it, neither knows about the
 other beyond the GameEnded event shape.
 """
 
-from net.game_room import GameEnded
+from services.game_service import GameEnded
 from persistence.elo import update_ratings
 from persistence.users_repository import User, UsersRepository
 

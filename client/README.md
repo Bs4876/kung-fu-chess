@@ -3,7 +3,7 @@
 A graphical client for the [`server/`](../server/README.md) game engine, built
 entirely on the course-provided `Img` class (vendored in `client/vendor/img.py`) -
 no PyGame/SFML/LWJGL anywhere. Always plays over a real WebSocket connection to
-a running [`server/net/ws_server.py`](../server/net/README.md) - there is no
+a running [`server/gateway/ws_server.py`](../server/README.md) - there is no
 offline/local-only mode.
 
 ## Running it
@@ -11,7 +11,7 @@ offline/local-only mode.
 Start the server first (from `server/`, in its own terminal):
 
 ```bash
-python -m net.ws_server
+python -m gateway.ws_server
 ```
 
 Then, from `client/`:

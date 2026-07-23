@@ -1,4 +1,9 @@
-"""Generic publish/subscribe mechanism - no game knowledge at all."""
+"""Generic publish/subscribe mechanism - no game knowledge at all.
+
+Deliberately duplicated verbatim from server/engine/observer.py rather than
+imported, so server/ stays importable/testable with zero knowledge that
+client/ exists.
+"""
 
 
 class Subject:

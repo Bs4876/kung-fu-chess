@@ -1,8 +1,8 @@
 """Scripted end-to-end test of login -> play -> ELO update, wiring the real
 SQLite-backed UsersRepository, EventBus, EloUpdater, and GameRoom together
-in-process (no socket - net/ws_server.py doesn't gate room entry on login
-yet, that lands once real matchmaking replaces the anonymous lobby, so
-there's no live connection flow to script this through yet). Matches this
+in-process (no socket - the real-socket equivalent of this flow lives in
+test_full_flow.py/test_ws_integration.py; this one is cheaper to run and
+easier to follow for the login/ELO wiring specifically). Matches this
 repo's existing "integration test" style (server/tests/integration/test_integration.py):
 several real modules wired together, nothing mocked.
 """
@@ -10,9 +10,9 @@ several real modules wired together, nothing mocked.
 from bus.event_bus import EventBus
 from model.board import Board
 from model.position import Position
-from net.auth import handle_login
-from net.game_room import GameRoom
-from net.session import Session
+from services.auth_service import handle_login
+from services.game_service import GameRoom
+from gateway.session import Session
 from persistence.db import connect
 from persistence.elo import update_ratings
 from persistence.elo_updater import EloUpdater

@@ -1,6 +1,6 @@
 import asyncio
 
-from net.matchmaking import Matchmaking
+from services.matchmaking_service import Matchmaking
 
 
 class FakeUser:

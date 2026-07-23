@@ -1,5 +1,5 @@
 """Manual create/join/cancel/watch room list - a second, human-driven way
-into a networked game alongside net/matchmaking.py's automatic ELO pairing.
+into a networked game alongside services/matchmaking_service.py's automatic ELO pairing.
 Both terminate in an identical GameRoom construction (via the same injected
 new_room factory) - nothing about engine/tick-loop/ELO wiring is duplicated
 between the two entry paths.
@@ -16,7 +16,7 @@ import secrets
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from net.game_room import GameRoom
+    from services.game_service import GameRoom
 
 # Excludes visually-ambiguous characters (0/O, 1/I/L) so a code is easy to
 # read aloud/type correctly - a full uuid4 hex is unambiguous too, but far
@@ -51,8 +51,8 @@ class _RunningRoom:
 class RoomRegistry:
     def __init__(self, new_room):
         """new_room() -> a fresh, started, empty GameRoom - the same
-        factory net/matchmaking.py takes, so rooms created either way are
-        built identically."""
+        factory services/matchmaking_service.py takes, so rooms created
+        either way are built identically."""
         self._new_room = new_room
         self._pending: dict[str, _PendingRoom] = {}
         self._running: dict[str, _RunningRoom] = {}
@@ -60,8 +60,8 @@ class RoomRegistry:
     def create_room(self, name: str, websocket, user) -> str:
         """Register a new pending (1-occupant) room and return its id right
         away - call await_join(room_id) afterward to block until a second
-        player joins, the same two-step shape net/ws_server.py already uses
-        for matchmaking's play()."""
+        player joins, the same two-step shape gateway/ws_server.py already
+        uses for matchmaking's play()."""
         room_id = _generate_room_code()
         while room_id in self._pending or room_id in self._running:
             room_id = _generate_room_code()

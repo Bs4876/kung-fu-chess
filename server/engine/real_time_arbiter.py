@@ -1,7 +1,7 @@
 import math
 from typing import Dict, List
 from model.position import Position
-from realtime.motion import Motion, ArrivalEvent, CollisionEvent, straight_line_meeting_time
+from engine.motion import Motion, ArrivalEvent, CollisionEvent, straight_line_meeting_time
 from config import JUMP_TRAVEL_TIME
 
 

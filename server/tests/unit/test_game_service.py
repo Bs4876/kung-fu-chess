@@ -3,8 +3,8 @@ import json
 
 from bus.event_bus import EventBus
 from model.board import Board
-from net import protocol
-from net.game_room import GameEnded, GameRoom
+import protocol
+from services.game_service import GameEnded, GameRoom
 
 
 def board_from(rows):

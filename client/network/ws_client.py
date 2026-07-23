@@ -15,7 +15,7 @@ import threading
 import websockets
 from websockets.asyncio.client import ClientConnection
 
-from net import protocol
+import protocol
 
 
 class WsClient:

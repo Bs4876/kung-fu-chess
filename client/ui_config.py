@@ -73,6 +73,10 @@ SOUND_PROMOTION = SOUNDS_DIR / "promotion.wav"
 SOUND_GAME_OVER = SOUNDS_DIR / "game_over.wav"
 SOUND_ILLEGAL_MOVE = SOUNDS_DIR / "illegal_move.wav"
 
+# screens/home_screen.py, screens/login_screen.py (every Button click), and
+# user_input/mouse_controller.py (every board left/right click)
+SOUND_CLICK = SOUNDS_DIR / "click.wav"
+
 # ui_widgets/button.py - the only clickable widget the course's Img-only
 # graphics rule leaves room for: a labeled, pixel-drawn rectangle. Used by
 # screens/home_screen.py's Play/Rooms buttons and screens/login_screen.py's

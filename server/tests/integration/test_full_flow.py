@@ -19,8 +19,8 @@ import pytest
 import websockets
 
 from model.position import Position
-from net import protocol
-from net.ws_server import serve
+import protocol
+from gateway.ws_server import serve
 from persistence.db import connect as connect_db
 from persistence.users_repository import UsersRepository
 

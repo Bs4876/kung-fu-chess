@@ -12,6 +12,7 @@ reads as part of the same game rather than a generic launcher.
 import cv2
 
 import ui_config
+from ui_components.sound_player import play_sound
 from ui_widgets.button import Button
 from ui_widgets.canvas import blank_canvas
 
@@ -105,8 +106,10 @@ class HomeScreen:
         if event != cv2.EVENT_LBUTTONDOWN:
             return
         if self._play_button.contains(x, y):
+            play_sound(ui_config.SOUND_CLICK)
             self._on_play()
         elif self._rooms_button.contains(x, y):
+            play_sound(ui_config.SOUND_CLICK)
             self._on_rooms()
 
     def handle_key(self, key: int | None) -> None:

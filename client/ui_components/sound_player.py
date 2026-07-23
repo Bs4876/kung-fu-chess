@@ -23,7 +23,7 @@ _SOUND_FOR_EVENT = {
 }
 
 
-def _play(path) -> None:
+def play_sound(path) -> None:
     if user_settings.SOUND_ENABLED:
         winsound.PlaySound(str(path), winsound.SND_FILENAME | winsound.SND_ASYNC)
 
@@ -52,7 +52,7 @@ class SoundPlayer:
     def handle_event(self, event) -> None:
         path = _SOUND_FOR_EVENT.get(type(event))
         if path is not None:
-            _play(path)
+            play_sound(path)
         if isinstance(event, MoveAccepted):
             self._footsteps[event.source] = _Footsteps(event.duration_ms)
 
@@ -66,4 +66,4 @@ class SoundPlayer:
             due_steps = footsteps.elapsed_ms // MOVE_TRAVEL_TIME_PER_CELL + 1
             if due_steps > footsteps.steps_played:
                 footsteps.steps_played = due_steps
-                _play(ui_config.SOUND_MOVE)
+                play_sound(ui_config.SOUND_MOVE)

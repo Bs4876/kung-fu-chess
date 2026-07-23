@@ -8,5 +8,5 @@ disconnect/reconnect, and persistent ELO ratings.
 
 This repository is split into:
 - [`server/`](server/README.md) — the Python game engine, rules, and the
-  WebSocket multiplayer server ([`server/net/`](server/net/README.md)).
+  WebSocket multiplayer server (`gateway/` → `router/` → `handlers/` → `services/`).
 - [`client/`](client/README.md) — the graphical client, built on the course-provided `Img` class.

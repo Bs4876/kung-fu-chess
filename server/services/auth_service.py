@@ -3,13 +3,13 @@ creates one on the spot (no password - "just for presentation", per the
 course spec), updates the connection's Session, and returns the wire
 response.
 
-No socket I/O here (see net/ws_server.py for where this gets called from a
-real connection) - message-in, response-out, the same testing philosophy as
+No socket I/O here (see handlers/auth_handler.py for where this gets called
+from a real connection) - message-in, response-out, the same testing philosophy as
 GameRoom's handle_request_move/handle_request_jump.
 """
 
-from net import protocol
-from net.session import Session
+import protocol
+from gateway.session import Session
 from persistence.users_repository import UsersRepository
 
 

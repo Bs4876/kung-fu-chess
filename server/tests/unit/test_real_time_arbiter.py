@@ -1,6 +1,6 @@
 from model.position import Position
-from realtime.real_time_arbiter import RealTimeArbiter
-from realtime.motion import Motion, ArrivalEvent, CollisionEvent
+from engine.real_time_arbiter import RealTimeArbiter
+from engine.motion import Motion, ArrivalEvent, CollisionEvent
 TEST_COOLDOWN_MS = 500
 
 
@@ -107,7 +107,7 @@ def test_jump_to_different_destination_arrives_there():
 
 
 def test_motion_with_explicit_travel_time():
-    from realtime.motion import Motion
+    from engine.motion import Motion
     m = Motion("wR", Position(0, 0), Position(0, 5), start_time=0, travel_time=500)
     assert m.arrival_time == 500
 
@@ -176,7 +176,7 @@ def test_path_positions_empty_for_knight_shaped_motion():
 
 
 def test_straight_line_meeting_time_is_none_when_either_motion_is_knight_shaped():
-    from realtime.motion import straight_line_meeting_time
+    from engine.motion import straight_line_meeting_time
     # Both start at the exact same cell at the exact same instant - as
     # obvious a "collision" as two paths can share, if evaluated as plain
     # straight lines - yet still None, since a knight has no path at all.

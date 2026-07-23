@@ -1,5 +1,7 @@
 import cv2
+import winsound
 
+import ui_config
 from screens.home_screen import HomeScreen
 
 
@@ -11,6 +13,12 @@ def _center_of(button) -> tuple[int, int]:
     return button.x + button.width // 2, button.y + button.height // 2
 
 
+def played_paths(monkeypatch):
+    calls = []
+    monkeypatch.setattr(winsound, "PlaySound", lambda path, flags: calls.append(path))
+    return calls
+
+
 def test_clicking_the_play_button_calls_on_play():
     called = []
     screen = screen_for(on_play=lambda: called.append(True))
@@ -19,12 +27,28 @@ def test_clicking_the_play_button_calls_on_play():
     assert called == [True]
 
 
+def test_clicking_the_play_button_plays_the_click_sound(monkeypatch):
+    calls = played_paths(monkeypatch)
+    screen = screen_for()
+    x, y = _center_of(screen._play_button)
+    screen.handle_mouse(cv2.EVENT_LBUTTONDOWN, x, y, 0, None)
+    assert calls == [str(ui_config.SOUND_CLICK)]
+
+
 def test_clicking_the_rooms_button_calls_on_rooms():
     called = []
     screen = screen_for(on_rooms=lambda: called.append(True))
     x, y = _center_of(screen._rooms_button)
     screen.handle_mouse(cv2.EVENT_LBUTTONDOWN, x, y, 0, None)
     assert called == [True]
+
+
+def test_clicking_the_rooms_button_plays_the_click_sound(monkeypatch):
+    calls = played_paths(monkeypatch)
+    screen = screen_for()
+    x, y = _center_of(screen._rooms_button)
+    screen.handle_mouse(cv2.EVENT_LBUTTONDOWN, x, y, 0, None)
+    assert calls == [str(ui_config.SOUND_CLICK)]
 
 
 def test_clicking_outside_either_button_does_nothing():

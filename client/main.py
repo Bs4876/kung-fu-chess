@@ -5,7 +5,7 @@ import ui_config
 from animation.animation_clock import Clock
 from config import WS_HOST, WS_PORT
 from graphics.window import Window
-from net import protocol
+import protocol
 from network.network_game_facade import NetworkGameFacade
 from network.ws_client import WsClient
 from persistence.event_log import EventLogWriter
@@ -54,7 +54,7 @@ def main() -> None:
     def build_home_screen(username: str, elo: int, status: str = "") -> HomeScreen:
         def on_play() -> None:
             # Play requires having already logged in on this same connection
-            # (see net/ws_server.py). Matchmaking can take up to
+            # (see gateway/ws_server.py). Matchmaking can take up to
             # config.MATCHMAKING_WAIT_MS looking for a human within range, so
             # this polls via a "Searching..." dialog (dialogs.wait_for_match)
             # instead of blocking the render thread - a hard block here used
@@ -116,6 +116,11 @@ def main() -> None:
         window.show_frame(scene)
 
     window.close()
+    # Without this, the socket is only ever torn down by the daemon thread
+    # getting abandoned on process exit - no close handshake, so the server
+    # can be slow to notice (e.g. a still-queued matchmaking entry can live
+    # long enough to get paired with a real, later player).
+    client.close()
 
 
 if __name__ == "__main__":

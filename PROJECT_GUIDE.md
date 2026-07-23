@@ -18,8 +18,9 @@ can collide mid-flight. The repo is two independent halves:
   real WebSocket for actual multiplayer.
 
 Recommended reading order (simple → complex, roughly how it was built):
-`model/` → `rules/` → `engine/game_engine.py` + `realtime/` → `engine/observer.py` →
-`net/` (the server) → `client/main.py` → `client/network/` → `client/screens/`.
+`model/` → `rules/` → `engine/game_engine.py` + `engine/motion.py`/`real_time_arbiter.py` →
+`engine/observer.py` → `protocol.py` → `services/` → `handlers/` + `router/` → `gateway/`
+(the server) → `client/main.py` → `client/network/` → `client/screens/`.
 
 ---
 
@@ -47,16 +48,12 @@ Recommended reading order (simple → complex, roughly how it was built):
 | `piece_rules.py` | Per-piece-kind legal-destination logic (sliding pieces, knight jumps, pawn rules, etc.) — pure functions over a `Board`. |
 | `rule_engine.py` | `RuleEngine` — validates a single move request (`validate_move`) and lists `legal_destinations` for a piece, built on `piece_rules.py`. |
 
-### `realtime/` — the "moves take time" machinery
-| File | What it is |
-|---|---|
-| `motion.py` | `Motion` — one piece's travel from src to dst with a start/arrival time; `ArrivalEvent`/`CollisionEvent`; `straight_line_meeting_time` (the math for when two motions cross paths). |
-| `real_time_arbiter.py` | `RealTimeArbiter` — owns every in-flight `Motion` plus cooldowns, and figures out (given the current clock) who has arrived and who has collided with whom. |
-
-### `engine/` — the orchestrator
+### `engine/` — the orchestrator and the "moves take time" machinery
 | File | What it is |
 |---|---|
 | `game_engine.py` | `GameEngine` — the single source of truth. Accepts move/jump requests, validates via `RuleEngine`, hands motion to `RealTimeArbiter`, and on `wait(dt_ms)` resolves whatever the arbiter says happened into `Arrived`/`Captured`/`Halted`/`Promoted` outcome objects — publishing each one the instant it resolves. Also exposes `GameSnapshot`, a read-only view for callers. |
+| `motion.py` | `Motion` — one piece's travel from src to dst with a start/arrival time; `ArrivalEvent`/`CollisionEvent`; `straight_line_meeting_time` (the math for when two motions cross paths). |
+| `real_time_arbiter.py` | `RealTimeArbiter` — owns every in-flight `Motion` plus cooldowns, and figures out (given the current clock) who has arrived and who has collided with whom. |
 | `observer.py` | `Subject` — a generic pub/sub primitive, no game knowledge. (Deliberately duplicated in `client/state/observer.py` rather than shared, so `server/` stays dependency-free of `client/`.) |
 
 ### `input/` — click-to-move, shared between the CLI and (via the client's `MouseController`) the GUI
@@ -65,16 +62,44 @@ Recommended reading order (simple → complex, roughly how it was built):
 | `board_mapper.py` | `BoardMapper` — pixel ↔ board-cell coordinate conversion. |
 | `controller.py` | `Controller` — click-then-click-again select/move flow on top of an engine-shaped object. |
 
-### `net/` — the WebSocket server (the newest, most complex part)
+### The WebSocket server (the newest, most complex part) — a small layered stack
+`protocol.py` (wire format) is shared by every layer below it. Each layer only talks to the
+one directly beneath it: `gateway/` calls `router/`, `router/` calls `handlers/`, `handlers/`
+call `services/`.
+
 | File | What it is |
 |---|---|
-| `protocol.py` | Every wire message shape as plain-dict builder functions + `encode`/`decode` (JSON) + dict↔engine-dataclass translation. The one place that knows about the wire format. |
+| `protocol.py` (top-level) | Every wire message shape as plain-dict builder functions + `encode`/`decode` (JSON) + dict↔engine-dataclass translation. The one place that knows about the wire format. |
+
+#### `gateway/` — owns the real socket
+| File | What it is |
+|---|---|
+| `ws_server.py` | `Gateway` — one instance per connection: the read loop, JSON decode, exception containment around dispatch (a bad/buggy message can't take the connection down), and cleanup (matchmaking cancel, room/viewer leave) on disconnect. Also the entrypoint (`serve`) — the only module that touches the `websockets` library directly. |
+| `connection.py` | `Connection` — one websocket's mutable state: its `Session`, and which `GameRoom` (if any) it's seated in or spectating. |
 | `session.py` | `Session` — per-connection state: which logged-in user (if any) owns this socket. |
-| `auth.py` | `handle_login` — fetch-or-create a user by username (no password — "just for presentation" per the course spec). |
-| `game_room.py` | `GameRoom` — owns one `GameEngine` and ticks it on its own asyncio task regardless of whether either player is currently connected; disconnect-grace-then-forfeit timer; reconnect/rejoin; viewer broadcast. |
-| `matchmaking.py` | `Matchmaking` — automatic ELO-range pairing queue; gives up (no bot fallback) after a timeout with no human found. |
-| `room_registry.py` | Manual create/join/cancel/watch rooms — the human-driven alternative to matchmaking. Both paths build an identical `GameRoom` via the same injected factory. Evicts ended rooms so they don't leak forever. |
-| `ws_server.py` | Entrypoint — wires everything above to real `websockets` connections; the only module that touches the `websockets` library directly. |
+
+#### `router/` — message_type → handler
+| File | What it is |
+|---|---|
+| `message_router.py` | Table-driven dispatch: `build_router()` maps every client message type to its handler (closing over whichever service that handler needs via `functools.partial`); `dispatch()` looks a message's type up and awaits it, or sends `bad_message` for an unrecognized type. |
+
+#### `handlers/` — one function per client message type; translates a message into a service call + a response
+| File | What it is |
+|---|---|
+| `auth_handler.py` | `login` — the one message that doesn't need `require_authenticated`, since it's what authenticates the connection in the first place. |
+| `matchmaking_handler.py` | `play` / `cancel_matchmaking`. |
+| `rooms_handler.py` | `list_rooms` / `create_room` / `join_room` / `cancel_room` / `watch_room` / `rejoin_game`. |
+| `gameplay_handler.py` | `request_move` / `request_jump` — only meaningful once seated in a room. |
+| `common.py` | Shared logic used by 2+ handler modules: `require_authenticated`, `enter_room`, `watch`. |
+
+#### `services/` — the actual business logic, socket-agnostic
+| File | What it is |
+|---|---|
+| `auth_service.py` | `handle_login` — fetch-or-create a user by username (no password — "just for presentation" per the course spec). |
+| `game_service.py` | `GameRoom` — owns one `GameEngine` and ticks it on its own asyncio task regardless of whether either player is currently connected; disconnect-grace-then-forfeit timer; reconnect/rejoin; viewer broadcast. |
+| `game_registry.py` | `GameRegistry` — tracks every currently-active `GameRoom` by `game_id`, so a dropped connection can look its game back up to rejoin. |
+| `matchmaking_service.py` | `Matchmaking` — automatic ELO-range pairing queue; gives up (no bot fallback) after a timeout with no human found. |
+| `room_service.py` | `RoomRegistry` — manual create/join/cancel/watch rooms, the human-driven alternative to matchmaking. Both paths build an identical `GameRoom` via the same injected factory. Evicts ended rooms so they don't leak forever. |
 
 ### `bus/` and `persistence/` — cross-cutting concerns, decoupled via events
 | File | What it is |
@@ -173,15 +198,21 @@ design).
   and never checks which; both satisfy the same implicit interface. No `ABC`/formal interface
   was introduced for this — deliberately, to match the project's small scope.
 - **Repository** — `UsersRepository` hides SQL behind `get_by_username`/`create_user`/etc.
-- **Registry** — `RoomRegistry` (manual rooms) and the server's `GameRegistry` (all active
-  games, keyed by id) — both just "a live collection of X, keyed by id."
+- **Registry** — `services/room_service.RoomRegistry` (manual rooms) and
+  `services/game_registry.GameRegistry` (all active games, keyed by id) — both just "a live
+  collection of X, keyed by id."
 - **Dependency Injection via factories** — `RoomRegistry`/`Matchmaking` both take a
   `new_room` factory function rather than constructing `GameRoom` themselves, so both entry
   paths build identical rooms without duplicating the wiring.
 - **Structural typing (Protocol)** — `graphics/protocols.py` lets the rendering layer be unit
   tested without any real `cv2`/`Img` object, by depending on shape, not concrete classes.
-- **Translator / pure mapping** — `state/outcome_translator.py` and `net/protocol.py`'s
+- **Translator / pure mapping** — `state/outcome_translator.py` and `protocol.py`'s
   dict↔dataclass functions: no state, just "shape A in, shape B out."
+- **Layered architecture** — the WebSocket server is split into `gateway/` (owns the real
+  socket) → `router/` (message_type → handler) → `handlers/` (message → service call +
+  response) → `services/` (business logic, socket-agnostic), each layer only calling the one
+  directly beneath it. Mirrors why `net/` was renamed/split this way in the first place: the
+  old `net/` mixed all four concerns in a handful of files.
 - **Single Responsibility, taken seriously** — the biggest structural pattern in this repo
   isn't a GoF pattern at all: almost every file is one small class doing exactly one job
   (compare `piece_renderer.py` vs `overlay_renderer.py` vs `hud_renderer.py`, or the whole

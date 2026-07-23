@@ -1,6 +1,14 @@
 """One active game: owns a GameEngine and drives it forward in real time on
 its own asyncio task, independent of whether either player is connected - a
 disconnected client can never stall the simulation for the other one.
+
+Unlike the rest of services/, this one *does* know the wire format
+(imports protocol directly) - a single engine tick can fan out to 2+
+sockets (every seated player plus every viewer) with no single
+request/response pair for a handlers/ module to hang that broadcast off
+of, so it builds and sends those messages itself instead of returning
+something for a caller to send. That's a deliberate, narrow exception to
+"services don't know about wire format," not an oversight.
 """
 
 import asyncio
@@ -11,7 +19,7 @@ from bus.event_bus import EventBus
 from config import DISCONNECT_GRACE_MS, TICK_MS
 from engine.game_engine import Arrived, Captured, GameEngine, Halted, Promoted
 from model.board import EMPTY, Board
-from net import protocol
+import protocol
 
 COLORS = ("white", "black")
 
@@ -179,7 +187,7 @@ class GameRoom:
     def player_name(self, color: str) -> str | None:
         """The username seated in color, or None if that seat is empty or
         holds an anonymous player - used to tell each client who it's
-        actually playing against (see net/ws_server.py's enter_room)."""
+        actually playing against (see handlers/common.py's enter_room)."""
         seated = self._players.get(color)
         return seated.username if isinstance(seated, _HasUsername) else None
 
@@ -187,7 +195,7 @@ class GameRoom:
         """Which color, if any, player was seated as - used to resolve a
         rejoin_game request back to a color. Matched by username rather than
         object identity: a reconnecting session's User comes from a fresh
-        DB query (net/auth.py's handle_login), never the same Python object
+        DB query (services/auth_service.py's handle_login), never the same Python object
         the original connection's join() call stored."""
         if not isinstance(player, _HasUsername):
             return None

@@ -9,7 +9,7 @@ instead of inline screen text.
 import tkinter as tk
 from tkinter import messagebox
 
-from net import protocol
+import protocol
 
 _POLL_INTERVAL_MS = 100
 

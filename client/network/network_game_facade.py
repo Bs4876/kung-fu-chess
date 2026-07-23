@@ -32,7 +32,7 @@ from config import JUMP_TRAVEL_TIME, MOVE_TRAVEL_TIME_PER_CELL
 from engine.game_engine import Arrived, Captured, GameSnapshot, Halted, Promoted
 from model.board import EMPTY, Board
 from model.position import Position
-from net import protocol
+import protocol
 from rules.rule_engine import RuleEngine
 from state.game_events import GameOver, MoveAccepted, MoveRejected, OpponentDisconnected, OpponentReconnected
 from state.motion_tracker import MotionTracker, chebyshev_distance
@@ -240,7 +240,7 @@ class NetworkGameFacade:
 
 
 def _reconstruct_outcome(message: dict):
-    """Inverse of net.protocol.outcome(): rebuild the real engine dataclass
+    """Inverse of protocol.outcome(): rebuild the real engine dataclass
     from a decoded wire message, so the rest of this module (and the
     already-tested state/outcome_translator.py + state/motion_tracker.py it
     reuses unchanged) never has to know it came over a socket."""

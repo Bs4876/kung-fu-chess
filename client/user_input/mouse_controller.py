@@ -17,6 +17,9 @@ board-local pixels and have no idea the HUD exists.
 
 import cv2
 
+import ui_config
+from ui_components.sound_player import play_sound
+
 
 class MouseController:
     def __init__(self, controller, facade, mapper, board_x_offset: int = 0):
@@ -28,8 +31,10 @@ class MouseController:
     def handle_event(self, event, x, y, flags, param) -> None:
         x -= self._board_x_offset
         if event == cv2.EVENT_LBUTTONDOWN:
+            play_sound(ui_config.SOUND_CLICK)
             self._handle_left_click(x, y)
         elif event == cv2.EVENT_RBUTTONDOWN:
+            play_sound(ui_config.SOUND_CLICK)
             self._handle_jump(x, y)
 
     def _handle_left_click(self, x, y) -> None:

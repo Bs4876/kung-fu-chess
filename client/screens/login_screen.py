@@ -17,6 +17,7 @@ same callback-based split home_screen.py's on_play/on_rooms already use.
 import cv2
 
 import ui_config
+from ui_components.sound_player import play_sound
 from ui_widgets.button import Button
 from ui_widgets.canvas import blank_canvas
 
@@ -110,6 +111,7 @@ class LoginScreen:
         if event != cv2.EVENT_LBUTTONDOWN:
             return
         if self._login_button.contains(x, y):
+            play_sound(ui_config.SOUND_CLICK)
             self._submit()
 
     def handle_key(self, key: int | None) -> None:

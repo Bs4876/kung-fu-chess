@@ -1,6 +1,6 @@
 import asyncio
 
-from net.room_registry import RoomRegistry
+from services.room_service import RoomRegistry
 
 
 class FakeSocket:

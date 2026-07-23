@@ -66,7 +66,7 @@ def decode(text: str | bytes) -> dict:
 def position_from_wire(data: dict) -> Position:
     """Raises ValueError if row/col are missing, not plain ints, or negative -
     callers are expected to turn that into an `error` response the same way
-    decode()'s own ValueError already is (see net/ws_server.py's dispatch),
+    decode()'s own ValueError already is (see gateway/ws_server.py's dispatch),
     rather than let some unrelated downstream TypeError/IndexError (e.g. list
     indexing with a float, or a huge int) be what actually catches it."""
     row, col = data.get("row"), data.get("col")
@@ -91,8 +91,8 @@ def game_start(
     game_id: str, color: str | None, state_version: int, snapshot,
     white_name: str | None = None, black_name: str | None = None,
 ) -> dict:
-    """color is None for a viewer's catch-up snapshot (see net/ws_server.py's
-    _watch) - never for a seated player. white_name/black_name are the
+    """color is None for a viewer's catch-up snapshot (see handlers/common.py's
+    watch()) - never for a seated player. white_name/black_name are the
     seated players' usernames (None if that seat is anonymous/unseated) so
     a client can show who it's actually playing against."""
     return {

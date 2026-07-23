@@ -11,7 +11,7 @@ import pytest
 from chess_io.board_parser import BoardParser
 from engine.game_engine import Arrived, Captured, GameSnapshot, Halted, MoveResult, Promoted
 from model.position import Position
-from net import protocol
+import protocol
 from network.network_game_facade import MatchmakingError, NetworkGameFacade, wait_for_game_start
 from state.game_events import (
     GameOver, MoveAccepted, MoveRejected, OpponentDisconnected, OpponentReconnected, PieceArrived, PieceCaptured,

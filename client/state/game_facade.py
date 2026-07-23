@@ -1,5 +1,9 @@
 """Wraps GameEngine to add client-side motion prediction and event notifications.
 
+Not currently built anywhere in main.py - the app always plays over the
+network via NetworkGameFacade instead. Kept because this class's own tests
+and GameScreen's tests exercise it directly (a real facade, not a mock).
+
 The engine only ever shows a piece "resting at source" or "resting at
 destination" (see server/realtime/motion.py - mid-flight positions exist only
 for the arbiter's own collision math and are never exposed via GameSnapshot).

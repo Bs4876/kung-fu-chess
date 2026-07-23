@@ -11,8 +11,8 @@ import asyncio
 import pytest
 
 from model.position import Position
-from net import protocol
-from net.ws_server import serve
+import protocol
+from gateway.ws_server import serve
 from network.network_game_facade import NetworkGameFacade, wait_for_game_start
 from network.ws_client import WsClient
 
@@ -28,7 +28,7 @@ async def running_server(tmp_path):
 
 def _register_login_and_play(uri: str, username: str) -> NetworkGameFacade:
     """Blocking: connect, log in (creating the account on first login - see
-    net/auth.py), send play, and wait for game_start (skipping any
+    services/auth_service.py), send play, and wait for game_start (skipping any
     matchmaking_status preamble) - everything NetworkGameFacade needs before
     it can be constructed."""
     client = WsClient(uri)
